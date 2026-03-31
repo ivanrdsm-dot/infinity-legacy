@@ -335,6 +335,21 @@
     .wa:hover{transform:scale(1.1);box-shadow:0 12px 32px rgba(37,211,102,.5)}
     .wa svg{width:27px;height:27px;fill:white}
 
+    /* LOGO FIX — removes white bg on cream nav */
+    .logo-dark{mix-blend-mode:multiply}
+
+    /* LANGUAGE SWITCH */
+    .lang-switch{display:flex;align-items:center;gap:2px;background:rgba(255,255,255,.1);border-radius:50px;padding:3px;border:1px solid rgba(255,255,255,.15);margin-left:.5rem}
+    .nav.scrolled .lang-switch{background:rgba(11,15,20,.06);border-color:var(--border)}
+    .lang-btn{padding:5px 11px;border-radius:50px;font-size:.7rem;font-weight:600;letter-spacing:.07em;color:rgba(255,255,255,.5);transition:var(--ease);line-height:1;cursor:pointer}
+    .lang-btn.active{background:var(--gold);color:var(--dark)}
+    .nav.scrolled .lang-btn{color:var(--gray-light)}
+    .nav.scrolled .lang-btn.active{background:var(--gold);color:var(--dark)}
+    @media(max-width:768px){.lang-switch{display:none}}
+    .drawer-lang{display:flex;gap:8px;margin-top:1.5rem}
+    .drawer-lang .lang-btn{background:rgba(255,255,255,.06);color:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.1);padding:9px 22px;border-radius:50px;font-size:.8rem;font-weight:600}
+    .drawer-lang .lang-btn.active{background:var(--gold);color:var(--dark);border-color:var(--gold)}
+
     /* SCROLL PROGRESS */
     #scrollProgress{position:fixed;top:0;left:0;width:100%;height:2px;background:var(--gold);transform:scaleX(0);transform-origin:left;z-index:1001;transition:transform .05s linear}
 
@@ -422,6 +437,10 @@
       <li><a href="#faq">FAQ</a></li>
       <li><a href="#contacto">Contacto</a></li>
     </ul>
+    <div class="lang-switch">
+      <button class="lang-btn active" data-lang="es" onclick="setLang('es')">ES</button>
+      <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+    </div>
     <a href="#contacto" class="nav-cta">Agendar consulta</a>
     <button class="burger" id="burger" aria-label="Menú" aria-expanded="false">
       <span></span><span></span><span></span>
@@ -437,6 +456,10 @@
   <a href="#faq">FAQ</a>
   <a href="#contacto">Contacto</a>
   <a href="#contacto" class="btn btn-gold" style="margin-top:1.5rem;justify-content:center">Agendar consulta</a>
+  <div class="drawer-lang">
+    <button class="lang-btn active" data-lang="es" onclick="setLang('es');document.getElementById('burger').click()">ES</button>
+    <button class="lang-btn" data-lang="en" onclick="setLang('en');document.getElementById('burger').click()">EN</button>
+  </div>
 </nav>
 
 <!-- HERO -->
@@ -759,35 +782,51 @@
 </a>
 
 <script>
-// ===== PROJECTS DATA — clean paths =====
+let currentLang = localStorage.getItem('il-lang') || 'es';
+
+// ===== PROJECTS DATA =====
 const PROJECTS = [
-  { id:'azizi', title:'Azizi Venice', location:'Dubai, UAE', cat:'Real Estate Internacional', feat:true,
+  { id:'azizi', title:'Azizi Venice', location:'Dubai, UAE',
+    cat:'Real Estate Internacional', catEn:'International Real Estate', feat:true,
     url:'projects/azizi-venice.html',
     desc:'Desarrollo residencial frente al agua en Dubai con arquitectura de clase mundial y amenidades exclusivas para el estilo de vida más exigente.',
+    descEn:'Waterfront residential development in Dubai with world-class architecture and exclusive amenities for the most demanding lifestyle.',
     imgs:['images/azizi-venice/edificio.webp','images/azizi-venice/habitacion.webp','images/azizi-venice/sala.webp','images/azizi-venice/alberca-2.webp','images/azizi-venice/gym.webp','images/azizi-venice/sauna.webp'] },
-  { id:'clinica', title:'Luxury Clinics', location:'México', cat:'Salud & Bienestar', feat:false,
+  { id:'clinica', title:'Luxury Clinics', location:'México',
+    cat:'Salud & Bienestar', catEn:'Health & Wellness', feat:false,
     url:'projects/luxury-clinics.html',
     desc:'Red de clínicas estéticas premium con tecnología de vanguardia, atención personalizada y presencia en múltiples ciudades de México.',
+    descEn:'Network of premium aesthetic clinics with cutting-edge technology, personalized care and presence in multiple cities across Mexico.',
     imgs:['images/clinica/exterior.webp','images/clinica/recepcion.webp','images/clinica/consultorio.webp','images/clinica/sala-espera.webp','images/clinica/maquinas.webp','images/clinica/doctora.webp'] },
-  { id:'monte', title:'Monte Vinum', location:'Querétaro, México', cat:'Turismo & Hospitalidad', feat:false,
+  { id:'monte', title:'Monte Vinum', location:'Querétaro, México',
+    cat:'Turismo & Hospitalidad', catEn:'Tourism & Hospitality', feat:false,
     url:'projects/monte-vinum.html',
     desc:'Viñedo y complejo de hospitalidad de lujo en el Valle del Vino. Bodega propia, restaurante gourmet, ecolofts y bodas de destino.',
+    descEn:'Luxury vineyard and hospitality complex in the Wine Valley. Private winery, gourmet restaurant, ecolofts and destination weddings.',
     imgs:['images/monte-vinum/vinedo.webp','images/monte-vinum/vino.webp','images/monte-vinum/restaurante-bar.webp','images/monte-vinum/ecolofts.webp','images/monte-vinum/alberca.webp','images/monte-vinum/boda.webp'] },
-  { id:'kukulkan', title:'The Jungle Kukulkán', location:'Yucatán, México', cat:'Ecoturismo & Glamping', feat:false,
+  { id:'kukulkan', title:'The Jungle Kukulkán', location:'Yucatán, México',
+    cat:'Ecoturismo & Glamping', catEn:'Ecotourism & Glamping', feat:false,
     url:'projects/kukulkan.html',
     desc:'100 glampings de lujo en la selva yucateca. Jacuzzis privados, camas matrimoniales y conexión total con la naturaleza maya.',
+    descEn:'100 luxury glamping units in the Yucatan jungle. Private jacuzzis, king-size beds and total immersion in Mayan nature.',
     imgs:['images/kukulkan/exterior.webp','images/kukulkan/habitacion.webp','images/kukulkan/jacuzzi.webp','images/kukulkan/glampings-aerea.webp','images/kukulkan/bano.webp','images/kukulkan/sala-estar.webp'] },
-  { id:'hospital', title:'Hospital Real de Ángeles', location:'Zacatecas, México', cat:'Salud & Infraestructura', feat:false,
+  { id:'hospital', title:'Hospital Real de Ángeles', location:'Zacatecas, México',
+    cat:'Salud & Infraestructura', catEn:'Health & Infrastructure', feat:false,
     url:'projects/hospital.html',
     desc:'Hospital privado de última generación con quirófanos de alta tecnología, área pediátrica y habitaciones premium.',
+    descEn:'Next-generation private hospital with high-tech operating rooms, specialized pediatric ward and premium recovery rooms.',
     imgs:['images/hospital/exterior.webp','images/hospital/quirofano.webp','images/hospital/habitacion.webp','images/hospital/doctores.webp','images/hospital/pediatria.webp','images/hospital/sala-espera.webp'] },
-  { id:'puerto', title:'Town Houses Puerto Ángel', location:'Oaxaca, México', cat:'Residencial de Lujo', feat:false,
+  { id:'puerto', title:'Town Houses Puerto Ángel', location:'Oaxaca, México',
+    cat:'Residencial de Lujo', catEn:'Luxury Residential', feat:false,
     url:'projects/town-houses.html',
     desc:'27 town houses de lujo con vista al Pacífico en Puerto Ángel, Oaxaca. Piscina, spa y acceso directo a la playa.',
+    descEn:'27 luxury town houses with Pacific Ocean views in Puerto Ángel, Oaxaca. Pool, spa and direct private beach access.',
     imgs:['images/town-houses/vista-panoramica.webp','images/town-houses/alberca.webp','images/town-houses/recamara.webp','images/town-houses/sala.webp','images/town-houses/spa.webp','images/town-houses/amenidades.webp'] },
-  { id:'citrus', title:'Citrus Limones', location:'México', cat:'Agroindustria & Exportación', feat:false,
+  { id:'citrus', title:'Citrus Limones', location:'México',
+    cat:'Agroindustria & Exportación', catEn:'Agroindustry & Export', feat:false,
     url:'projects/citrus-limones.html',
     desc:'Proyecto agrícola de exportación de limón premium. Infraestructura moderna, certificaciones internacionales y acceso a mercados globales.',
+    descEn:'Premium lime export agricultural project. Modern infrastructure, international certifications and access to global markets.',
     imgs:['images/citrus-limone/campo-2.webp','images/citrus-limone/limon.webp','images/citrus-limone/canastas.webp','images/citrus-limone/pasillo.webp','images/citrus-limone/personas.webp','images/citrus-limone/entrada.webp'] }
 ];
 
@@ -806,6 +845,11 @@ function buildProjects() {
 
     const dots = p.imgs.map((_,j)=>`<button class="car-dot${j===0?' on':''}" aria-label="Imagen ${j+1}"></button>`).join('');
 
+    const lang = currentLang;
+    const desc = (lang === 'en' && p.descEn) ? p.descEn : p.desc;
+    const cat  = (lang === 'en' && p.catEn)  ? p.catEn  : p.cat;
+    const linkTxt = lang === 'en' ? 'View project' : 'Ver proyecto';
+
     const pinSvg = `<svg viewBox="0 0 24 24"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0112 2a8 8 0 018 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>`;
     const arrowSvg = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 6.5h9M7.5 3l3 3.5-3 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
@@ -813,7 +857,7 @@ function buildProjects() {
       <div class="car">
         <div class="car-track">${slides}</div>
         <div class="car-overlay"></div>
-        <div class="car-cat">${p.cat}</div>
+        <div class="car-cat">${cat}</div>
         <div class="car-nav">
           <button class="car-btn prev-btn" aria-label="Anterior"><svg viewBox="0 0 13 13" fill="none"><path d="M8.5 2.5l-4 4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
           <button class="car-btn next-btn" aria-label="Siguiente"><svg viewBox="0 0 13 13" fill="none"><path d="M4.5 2.5l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
@@ -823,8 +867,8 @@ function buildProjects() {
       <div class="card-body">
         <div class="card-loc">${pinSvg} ${p.location}</div>
         <h3>${p.title}</h3>
-        <p>${p.desc}</p>
-        <span class="card-link">Ver proyecto ${arrowSvg}</span>
+        <p>${desc}</p>
+        <span class="card-link">${linkTxt} ${arrowSvg}</span>
       </div>`;
 
     g.appendChild(card);
@@ -1008,13 +1052,214 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
   });
 });
 
+// ===== TRANSLATIONS =====
+const SEL = {
+  nav1:'.nav-links li:nth-child(1) a', nav2:'.nav-links li:nth-child(2) a',
+  nav3:'.nav-links li:nth-child(3) a', nav4:'.nav-links li:nth-child(4) a',
+  nav5:'.nav-links li:nth-child(5) a', navCta:'a.nav-cta',
+  drNav1:'.drawer a:nth-child(1)', drNav2:'.drawer a:nth-child(2)',
+  drNav3:'.drawer a:nth-child(3)', drNav4:'.drawer a:nth-child(4)',
+  drNav5:'.drawer a:nth-child(5)', drCta:'.drawer .btn-gold',
+  heroBadge:'.hero-badge', heroH1:'.hero h1', heroDesc:'.hero-desc',
+  heroBtn1:'.hero-btns .btn-gold', heroBtn2:'.hero-btns .btn-outline',
+  heroStat1:'.hero-stats div:nth-child(1) .hs-lbl',
+  heroStat2:'.hero-stats div:nth-child(2) .hs-lbl',
+  heroStat3:'.hero-stats div:nth-child(3) .hs-lbl',
+  aboutLabel:'.about .label', aboutH2:'.about-txt h2',
+  aboutP1:'.about-txt > p:nth-of-type(1)', aboutP2:'.about-txt > p:nth-of-type(2)',
+  p1H4:'.pillars .pillar:nth-child(1) h4', p1P:'.pillars .pillar:nth-child(1) p',
+  p2H4:'.pillars .pillar:nth-child(2) h4', p2P:'.pillars .pillar:nth-child(2) p',
+  p3H4:'.pillars .pillar:nth-child(3) h4', p3P:'.pillars .pillar:nth-child(3) p',
+  p4H4:'.pillars .pillar:nth-child(4) h4', p4P:'.pillars .pillar:nth-child(4) p',
+  s1L:'.stats-grid .stat:nth-child(1) .stat-l', s2L:'.stats-grid .stat:nth-child(2) .stat-l',
+  s3L:'.stats-grid .stat:nth-child(3) .stat-l', s4L:'.stats-grid .stat:nth-child(4) .stat-l',
+  projLabel:'#proyectos .label', projH2:'#proyectos h2',
+  projP:'.proj-intro p', projBtn:'.proj-head .btn-dark',
+  tokLabel:'#tokenizacion .label', tokH2:'#tokenizacion h2',
+  tokP:'#tokenizacion .rr > p',
+  tf1H4:'.t-feats .t-feat:nth-child(1) h4', tf1P:'.t-feats .t-feat:nth-child(1) p',
+  tf2H4:'.t-feats .t-feat:nth-child(2) h4', tf2P:'.t-feats .t-feat:nth-child(2) p',
+  tf3H4:'.t-feats .t-feat:nth-child(3) h4', tf3P:'.t-feats .t-feat:nth-child(3) p',
+  tf4H4:'.t-feats .t-feat:nth-child(4) h4', tf4P:'.t-feats .t-feat:nth-child(4) p',
+  tokCta:'#tokenizacion .btn-gold',
+  eduLabel:'.edu .label', eduH2:'.edu h2', eduP:'.edu .tc p',
+  e1H4:'.edu-grid .edu-card:nth-child(1) h4', e1P:'.edu-grid .edu-card:nth-child(1) p',
+  e2H4:'.edu-grid .edu-card:nth-child(2) h4', e2P:'.edu-grid .edu-card:nth-child(2) p',
+  e3H4:'.edu-grid .edu-card:nth-child(3) h4', e3P:'.edu-grid .edu-card:nth-child(3) p',
+  e4H4:'.edu-grid .edu-card:nth-child(4) h4', e4P:'.edu-grid .edu-card:nth-child(4) p',
+  testiLabel:'.testi .label', testiH2:'.testi h2',
+  faqLabel:'.faq-left .label', faqH2:'.faq-left h2',
+  faqP:'.faq-left > p', faqCta:'.faq-left .btn-dark',
+  fq1:'.faq-item:nth-child(1) h4', fa1:'.faq-item:nth-child(1) .faq-ans p',
+  fq2:'.faq-item:nth-child(2) h4', fa2:'.faq-item:nth-child(2) .faq-ans p',
+  fq3:'.faq-item:nth-child(3) h4', fa3:'.faq-item:nth-child(3) .faq-ans p',
+  fq4:'.faq-item:nth-child(4) h4', fa4:'.faq-item:nth-child(4) .faq-ans p',
+  fq5:'.faq-item:nth-child(5) h4', fa5:'.faq-item:nth-child(5) .faq-ans p',
+  fq6:'.faq-item:nth-child(6) h4', fa6:'.faq-item:nth-child(6) .faq-ans p',
+  cLabel:'.contact .label', cH2:'.contact-left h2', cP:'.contact-left > p',
+  m1L:'.c-methods .c-method:nth-child(1) .c-lbl', m1V:'.c-methods .c-method:nth-child(1) .c-val',
+  m2L:'.c-methods .c-method:nth-child(2) .c-lbl',
+  m3L:'.c-methods .c-method:nth-child(3) .c-lbl', m3V:'.c-methods .c-method:nth-child(3) .c-val',
+  fFn:'label[for="fn"]', fLn:'label[for="ln"]', fEm:'label[for="em"]',
+  fPi:'label[for="pi"]', fMsg:'label[for="msg"]',
+  fSub:'.f-sub', fNote:'.f-note',
+  ftP:'.ft-brand p', ftH1:'.ft-col:nth-child(2) h5',
+  ftH2:'.ft-col:nth-child(3) h5', ftH3:'.ft-col:nth-child(4) h5'
+};
+
+const SVG_ARROW = `<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M3 7.5h9M8.5 3.5l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const DOT = `<span class="hero-dot"></span>`;
+
+const T = {
+es:{
+  nav1:'Nosotros', nav2:'Proyectos', nav3:'Tokenización', nav4:'FAQ', nav5:'Contacto',
+  navCta:'Agendar consulta', drNav1:'Nosotros', drNav2:'Proyectos', drNav3:'Tokenización',
+  drNav4:'FAQ', drNav5:'Contacto', drCta:'Agendar consulta',
+  heroBadge:`${DOT}México &amp; Dubai — Expansión Internacional`,
+  heroH1:'Visión <em>estructurada,</em><br/>legado sin límites',
+  heroDesc:'Desarrollamos proyectos internacionales de alto valor con claridad estratégica, ejecución impecable y tecnología de tokenización que democratiza el acceso al mercado inmobiliario de lujo.',
+  heroBtn1:`Explorar proyectos ${SVG_ARROW}`, heroBtn2:'Agendar consulta',
+  heroStat1:'Proyectos activos', heroStat2:'Países de operación', heroStat3:'Transparencia blockchain',
+  aboutLabel:'Quiénes somos',
+  aboutH2:'Desarrollamos el futuro<br/>con <em class="gold">visión estratégica</em>',
+  aboutP1:'Infinity Legacy es una firma de desarrollo estratégico internacional que convierte grandes ideas en proyectos de alto impacto. Operamos en México y Dubai, conectando oportunidades de participación premium con tecnología de vanguardia.',
+  aboutP2:'Nuestra misión es clara: desarrollar proyectos internacionales bajo estándares de excelencia, con transparencia total y una estructura que proteja a todos los participantes.',
+  p1H4:'Claridad estratégica', p1P:'Cada proyecto parte de una visión sólida y un plan ejecutable.',
+  p2H4:'Ejecución impecable', p2P:'Equipos especializados con experiencia en mercados internacionales.',
+  p3H4:'Soporte continuo', p3P:'Acompañamiento desde la concepción hasta la entrega final.',
+  p4H4:'Transparencia total', p4P:'Tecnología blockchain para seguimiento en tiempo real.',
+  s1L:'Proyectos activos', s2L:'Países de operación', s3L:'En desarrollo activo', s4L:'Transparencia blockchain',
+  projLabel:'Portafolio', projH2:'Proyectos que<br/><em class="gold">transforman mercados</em>',
+  projP:'Desde clínicas de lujo hasta desarrollos frente al mar y viñedos de clase mundial.',
+  projBtn:'Ver todos los proyectos',
+  tokLabel:'Innovación', tokH2:'Tokenización<br/><em class="gold">inmobiliaria</em>',
+  tokP:'Dividimos propiedades de alto valor en tokens digitales, permitiendo participar en proyectos premium antes inaccesibles. Tecnología Ethereum-compatible (RC20) con transparencia en tiempo real.',
+  tf1H4:'Transparencia estructural', tf1P:'Seguimiento en tiempo real de cada proyecto en blockchain.',
+  tf2H4:'Liquidez potencial', tf2P:'Estructuras eficientes que facilitan la transferencia de participaciones.',
+  tf3H4:'Acceso internacional', tf3P:'Participa en proyectos en México y Dubai desde cualquier parte del mundo.',
+  tf4H4:'Menos intermediarios', tf4P:'Contratos inteligentes que reducen costos y aumentan eficiencia.',
+  tokCta:'Conocer más',
+  eduLabel:'Educación financiera',
+  eduH2:'Pensar a largo plazo<br/>es una <em class="gold">ventaja competitiva</em>',
+  eduP:'Los mejores resultados los obtienen quienes entienden en qué participan y por qué.',
+  e1H4:'Visión de largo plazo', e1P:'Los proyectos de alto valor requieren paciencia estratégica. Diseñamos estructuras que maximizan el retorno en horizontes de 3 a 10 años.',
+  e2H4:'Comprensión del proyecto', e2P:'Cada proyecto incluye due diligence completo: análisis de mercado, proyecciones financieras, estructura legal y cronograma detallado de ejecución.',
+  e3H4:'Diversificación internacional', e3P:'Distribuir recursos entre México y Dubai reduce riesgos y abre oportunidades en economías con dinámicas completamente distintas.',
+  e4H4:'Transparencia tecnológica', e4P:'Blockchain permite verificar de forma independiente el estado de cada proyecto en tiempo real, eliminando la opacidad tradicional.',
+  testiLabel:'Testimonios', testiH2:'Lo que dicen<br/>nuestros <em style="color:var(--gold)">socios</em>',
+  faqLabel:'FAQ', faqH2:'Preguntas<br/><em class="gold">frecuentes</em>',
+  faqP:'¿Tienes dudas? Aquí respondemos las más comunes. Para preguntas adicionales escríbenos directamente.',
+  faqCta:'Contactar ahora',
+  fq1:'¿Qué es la tokenización inmobiliaria?',
+  fa1:'La tokenización inmobiliaria es el proceso de dividir la propiedad de un bien raíz en tokens digitales mediante blockchain. Cada token representa una fracción del activo, permitiendo que múltiples personas sean co-propietarias de proyectos de alto valor con montos accesibles.',
+  fq2:'¿Cómo se protege la seguridad de mi participación?',
+  fa2:'Cada proyecto cuenta con estructura legal robusta, due diligence exhaustivo y auditoría independiente. Los tokens RC20 están registrados en blockchain Ethereum garantizando trazabilidad e inmutabilidad.',
+  fq3:'¿Qué tipos de proyectos están disponibles?',
+  fa3:'Nuestro portafolio incluye clínicas estéticas premium, desarrollos residenciales de lujo en Dubai, glamping en Yucatán, viñedos en Querétaro, hospitales privados, proyectos agrícolas de exportación y casas frente al mar en Oaxaca.',
+  fq4:'¿Cuál es el monto mínimo de participación?',
+  fa4:'El monto varía según el proyecto. La tokenización nos permite ofrecer acceso desde montos significativamente menores a los del desarrollo inmobiliario tradicional. Contáctanos para conocer los rangos específicos.',
+  fq5:'¿Puedo participar desde fuera de México?',
+  fa5:'Sí. Contamos con estructuras jurídicas que facilitan la participación transfronteriza. Tenemos socios activos en México, Dubai, Estados Unidos y Europa.',
+  fq6:'¿Qué es el estándar RC20?',
+  fa6:'RC20 es nuestro estándar de token compatible con Ethereum (ERC-20). Garantiza interoperabilidad con la infraestructura blockchain más robusta del mundo, permitiendo tokens verificables, transferibles y auditables.',
+  cLabel:'Contacto', cH2:'Hablemos de<br/><em class="gold">tu próximo proyecto</em>',
+  cP:'Agenda una consulta sin costo con nuestro equipo. Analizamos tu perfil y presentamos las oportunidades más alineadas a tus objetivos.',
+  m1L:'WhatsApp', m1V:'Respuesta inmediata', m2L:'Email',
+  m3L:'Operaciones', m3V:'México · Dubai · Internacional',
+  fFn:'Nombre *', fLn:'Apellido', fEm:'Email *',
+  fPi:'Proyecto de tu elección', fMsg:'Mensaje *',
+  fSub:'Enviar consulta →', fNote:'Tu información es confidencial y nunca será compartida.',
+  ftP:'Firma de desarrollo estratégico internacional. Construimos legados con visión, tecnología y excelencia.',
+  ftH1:'Proyectos', ftH2:'Empresa', ftH3:'Legal'
+},
+en:{
+  nav1:'About', nav2:'Projects', nav3:'Tokenization', nav4:'FAQ', nav5:'Contact',
+  navCta:'Book a call', drNav1:'About', drNav2:'Projects', drNav3:'Tokenization',
+  drNav4:'FAQ', drNav5:'Contact', drCta:'Book a call',
+  heroBadge:`${DOT}Mexico &amp; Dubai — International Expansion`,
+  heroH1:'Structured <em>vision,</em><br/>limitless legacy',
+  heroDesc:'We develop high-value international projects with strategic clarity, flawless execution and tokenization technology that democratizes access to the luxury real estate market.',
+  heroBtn1:`Explore projects ${SVG_ARROW}`, heroBtn2:'Book a call',
+  heroStat1:'Active projects', heroStat2:'Operating countries', heroStat3:'Blockchain transparency',
+  aboutLabel:'About us',
+  aboutH2:'Building the future<br/>with <em class="gold">strategic vision</em>',
+  aboutP1:'Infinity Legacy is an international strategic development firm that transforms bold ideas into high-impact projects. We operate in Mexico and Dubai, connecting premium opportunities with cutting-edge technology.',
+  aboutP2:'Our mission is clear: to develop international projects under excellence standards, with full transparency and a structure that protects every stakeholder.',
+  p1H4:'Strategic clarity', p1P:'Every project starts with a solid vision and an actionable plan.',
+  p2H4:'Flawless execution', p2P:'Specialized teams with experience across international markets.',
+  p3H4:'Ongoing support', p3P:'Guidance from conception through final delivery.',
+  p4H4:'Full transparency', p4P:'Blockchain technology for real-time project tracking.',
+  s1L:'Active projects', s2L:'Countries of operation', s3L:'In active development', s4L:'Blockchain transparency',
+  projLabel:'Portfolio', projH2:'Projects that<br/><em class="gold">transform markets</em>',
+  projP:'From luxury clinics to oceanfront developments and world-class vineyards.',
+  projBtn:'View all projects',
+  tokLabel:'Innovation', tokH2:'Real estate<br/><em class="gold">tokenization</em>',
+  tokP:'We split high-value properties into digital tokens, enabling participation in premium projects previously inaccessible. Ethereum-compatible technology (RC20) with real-time transparency.',
+  tf1H4:'Structural transparency', tf1P:'Real-time tracking of every project on blockchain.',
+  tf2H4:'Potential liquidity', tf2P:'Efficient structures that facilitate the transfer of participations.',
+  tf3H4:'International access', tf3P:'Participate in Mexico and Dubai projects from anywhere in the world.',
+  tf4H4:'Fewer intermediaries', tf4P:'Smart contracts that reduce costs and increase efficiency.',
+  tokCta:'Learn more',
+  eduLabel:'Financial education',
+  eduH2:'Thinking long-term<br/>is a <em class="gold">competitive advantage</em>',
+  eduP:'The best results come to those who truly understand what they invest in and why.',
+  e1H4:'Long-term vision', e1P:'High-value projects require strategic patience. We design structures that maximize returns over 3 to 10-year horizons.',
+  e2H4:'Project understanding', e2P:'Every project includes full due diligence: market analysis, financial projections, legal structure and detailed execution timeline.',
+  e3H4:'International diversification', e3P:'Allocating resources between Mexico and Dubai reduces risk and opens opportunities in economies with completely different dynamics.',
+  e4H4:'Technological transparency', e4P:'Blockchain enables independent real-time verification of every project\'s status, eliminating traditional opacity.',
+  testiLabel:'Testimonials', testiH2:'What our<br/><em style="color:var(--gold)">partners say</em>',
+  faqLabel:'FAQ', faqH2:'Frequently asked<br/><em class="gold">questions</em>',
+  faqP:'Have questions? Here we answer the most common ones. For additional questions, contact us directly.',
+  faqCta:'Contact us',
+  fq1:'What is real estate tokenization?',
+  fa1:'Real estate tokenization is the process of dividing property ownership into digital tokens via blockchain. Each token represents a fraction of the asset, allowing multiple people to co-own high-value projects at accessible amounts.',
+  fq2:'How is my participation protected?',
+  fa2:'Each project features robust legal structure, exhaustive due diligence and independent auditing. RC20 tokens are registered on Ethereum blockchain ensuring traceability and immutability.',
+  fq3:'What types of projects are available?',
+  fa3:'Our portfolio includes premium aesthetic clinics, luxury residential developments in Dubai, glamping in Yucatan, vineyards in Queretaro, private hospitals, agricultural export projects and oceanfront homes in Oaxaca.',
+  fq4:'What is the minimum participation amount?',
+  fa4:'Amounts vary by project. Tokenization allows us to offer access at amounts significantly lower than traditional real estate development. Contact us for specific ranges on each active project.',
+  fq5:'Can I participate from outside Mexico?',
+  fa5:'Yes. We have legal structures that facilitate cross-border participation. We have active partners in Mexico, Dubai, the United States and Europe.',
+  fq6:'What is the RC20 standard?',
+  fa6:'RC20 is our Ethereum-compatible token standard (ERC-20). It ensures interoperability with the world\'s most robust blockchain infrastructure, making tokens verifiable, transferable and independently auditable.',
+  cLabel:'Contact', cH2:'Let\'s talk about<br/><em class="gold">your next project</em>',
+  cP:'Schedule a free consultation with our team. We analyze your profile and present the opportunities best aligned with your objectives.',
+  m1L:'WhatsApp', m1V:'Immediate response', m2L:'Email',
+  m3L:'Operations', m3V:'Mexico · Dubai · International',
+  fFn:'First name *', fLn:'Last name', fEm:'Email *',
+  fPi:'Project of interest', fMsg:'Message *',
+  fSub:'Send inquiry →', fNote:'Your information is confidential and will never be shared.',
+  ftP:'International strategic development firm. Building legacies with vision, technology and excellence.',
+  ftH1:'Projects', ftH2:'Company', ftH3:'Legal'
+}};
+
+function setLang(lang) {
+  currentLang = lang;
+  document.documentElement.lang = lang;
+  Object.entries(SEL).forEach(([key, sel]) => {
+    const val = T[lang][key];
+    if (!val) return;
+    document.querySelectorAll(sel).forEach(el => { el.innerHTML = val; });
+  });
+  // Re-render project cards in new language
+  const g = document.getElementById('projGrid');
+  if (g) { g.innerHTML = ''; buildProjects(); }
+  // Sync all lang toggle buttons (nav + drawer)
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+  localStorage.setItem('il-lang', lang);
+}
+
 // INIT
 document.addEventListener('DOMContentLoaded', () => {
+  currentLang = localStorage.getItem('il-lang') || 'es';
   buildProjects();
   observe();
   initTesti();
   initFAQ();
   initForm();
+  if (currentLang === 'en') setLang('en');
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === currentLang));
 });
 </script>
 </body>
