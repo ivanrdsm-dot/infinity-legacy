@@ -710,7 +710,7 @@
           <a href="#" class="ft-soc" aria-label="WhatsApp">💬</a>
         </div>
       </div>
-      <div class="ft-col"><h5>Proyectos</h5><ul><li><a href="#proyectos">Luxury Clinics</a></li><li><a href="#proyectos">Azizi Venice</a></li><li><a href="#proyectos">Monte Vinum</a></li><li><a href="#proyectos">The Jungle Kukulkán</a></li><li><a href="#proyectos">Hospital Real de Ángeles</a></li><li><a href="#proyectos">Town Houses Puerto Ángel</a></li></ul></div>
+      <div class="ft-col"><h5>Proyectos</h5><ul><li><a href="projects/luxury-clinics.html">Luxury Clinics</a></li><li><a href="projects/azizi-venice.html">Azizi Venice</a></li><li><a href="projects/monte-vinum.html">Monte Vinum</a></li><li><a href="projects/kukulkan.html">The Jungle Kukulkán</a></li><li><a href="projects/hospital.html">Hospital Real de Ángeles</a></li><li><a href="projects/town-houses.html">Town Houses Puerto Ángel</a></li><li><a href="projects/citrus-limones.html">Citrus Limones</a></li></ul></div>
       <div class="ft-col"><h5>Empresa</h5><ul><li><a href="#nosotros">Nosotros</a></li><li><a href="#tokenizacion">Tokenización</a></li><li><a href="#faq">FAQ</a></li><li><a href="#contacto">Contacto</a></li></ul></div>
       <div class="ft-col"><h5>Legal</h5><ul><li><a href="#">Política de privacidad</a></li><li><a href="#">Términos de uso</a></li><li><a href="#">Aviso legal</a></li></ul></div>
     </div>
@@ -730,24 +730,31 @@
 // ===== PROJECTS DATA — clean paths =====
 const PROJECTS = [
   { id:'azizi', title:'Azizi Venice', location:'Dubai, UAE', cat:'Real Estate Internacional', feat:true,
+    url:'projects/azizi-venice.html',
     desc:'Desarrollo residencial frente al agua en Dubai con arquitectura de clase mundial y amenidades exclusivas para el estilo de vida más exigente.',
     imgs:['images/azizi-venice/edificio.webp','images/azizi-venice/habitacion.webp','images/azizi-venice/sala.webp','images/azizi-venice/alberca-2.webp','images/azizi-venice/gym.webp','images/azizi-venice/sauna.webp'] },
   { id:'clinica', title:'Luxury Clinics', location:'México', cat:'Salud & Bienestar', feat:false,
+    url:'projects/luxury-clinics.html',
     desc:'Red de clínicas estéticas premium con tecnología de vanguardia, atención personalizada y presencia en múltiples ciudades de México.',
     imgs:['images/clinica/exterior.webp','images/clinica/recepcion.webp','images/clinica/consultorio.webp','images/clinica/sala-espera.webp','images/clinica/maquinas.webp','images/clinica/doctora.webp'] },
   { id:'monte', title:'Monte Vinum', location:'Querétaro, México', cat:'Turismo & Hospitalidad', feat:false,
+    url:'projects/monte-vinum.html',
     desc:'Viñedo y complejo de hospitalidad de lujo en el Valle del Vino. Bodega propia, restaurante gourmet, ecolofts y bodas de destino.',
     imgs:['images/monte-vinum/vinedo.webp','images/monte-vinum/vino.webp','images/monte-vinum/restaurante-bar.webp','images/monte-vinum/ecolofts.webp','images/monte-vinum/alberca.webp','images/monte-vinum/boda.webp'] },
   { id:'kukulkan', title:'The Jungle Kukulkán', location:'Yucatán, México', cat:'Ecoturismo & Glamping', feat:false,
+    url:'projects/kukulkan.html',
     desc:'100 glampings de lujo en la selva yucateca. Jacuzzis privados, camas matrimoniales y conexión total con la naturaleza maya.',
     imgs:['images/kukulkan/exterior.webp','images/kukulkan/habitacion.webp','images/kukulkan/jacuzzi.webp','images/kukulkan/glampings-aerea.webp','images/kukulkan/bano.webp','images/kukulkan/sala-estar.webp'] },
   { id:'hospital', title:'Hospital Real de Ángeles', location:'Zacatecas, México', cat:'Salud & Infraestructura', feat:false,
+    url:'projects/hospital.html',
     desc:'Hospital privado de última generación con quirófanos de alta tecnología, área pediátrica y habitaciones premium.',
     imgs:['images/hospital/exterior.webp','images/hospital/quirofano.webp','images/hospital/habitacion.webp','images/hospital/doctores.webp','images/hospital/pediatria.webp','images/hospital/sala-espera.webp'] },
   { id:'puerto', title:'Town Houses Puerto Ángel', location:'Oaxaca, México', cat:'Residencial de Lujo', feat:false,
+    url:'projects/town-houses.html',
     desc:'27 town houses de lujo con vista al Pacífico en Puerto Ángel, Oaxaca. Piscina, spa y acceso directo a la playa.',
     imgs:['images/town-houses/vista-panoramica.webp','images/town-houses/alberca.webp','images/town-houses/recamara.webp','images/town-houses/sala.webp','images/town-houses/spa.webp','images/town-houses/amenidades.webp'] },
   { id:'citrus', title:'Citrus Limones', location:'México', cat:'Agroindustria & Exportación', feat:false,
+    url:'projects/citrus-limones.html',
     desc:'Proyecto agrícola de exportación de limón premium. Infraestructura moderna, certificaciones internacionales y acceso a mercados globales.',
     imgs:['images/citrus-limone/campo-2.webp','images/citrus-limone/limon.webp','images/citrus-limone/canastas.webp','images/citrus-limone/pasillo.webp','images/citrus-limone/personas.webp','images/citrus-limone/entrada.webp'] }
 ];
@@ -781,7 +788,7 @@ function buildProjects() {
         <div class="card-loc">📍 ${p.location}</div>
         <h3>${p.title}</h3>
         <p>${p.desc}</p>
-        <a href="#contacto" class="card-link">Consultar proyecto <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 6.5h9M7.5 3l3 3.5-3 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <a href="${p.url || '#contacto'}" class="card-link">Ver proyecto <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 6.5h9M7.5 3l3 3.5-3 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
       </div>`;
 
     g.appendChild(card);
