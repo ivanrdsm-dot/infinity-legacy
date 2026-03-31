@@ -335,6 +335,36 @@
     .wa:hover{transform:scale(1.1);box-shadow:0 12px 32px rgba(37,211,102,.5)}
     .wa svg{width:27px;height:27px;fill:white}
 
+    /* SCROLL PROGRESS */
+    #scrollProgress{position:fixed;top:0;left:0;width:100%;height:2px;background:var(--gold);transform:scaleX(0);transform-origin:left;z-index:1001;transition:transform .05s linear}
+
+    /* CURSOR GLOW */
+    #cursorGlow{position:fixed;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(199,167,108,.055) 0%,transparent 68%);pointer-events:none;transform:translate(-50%,-50%);z-index:0;opacity:0;transition:opacity .4s;will-change:left,top}
+
+    /* SVG ICON HELPERS */
+    .pillar-ico svg,.t-node svg,.t-feat-ico svg,.c-ico svg,.ft-soc svg{display:block;width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .pillar-ico svg{stroke:var(--dark);width:17px;height:17px}
+    .t-node svg{width:20px;height:20px;stroke:var(--dark)}
+    .t-feat-ico svg{width:20px;height:20px;stroke:var(--gold)}
+    .c-ico svg{width:18px;height:18px;stroke:var(--gold)}
+    .ft-soc svg{width:16px;height:16px;stroke:rgba(255,255,255,.65)}
+    .t-core svg{width:32px;height:32px;stroke:var(--dark);fill:none;stroke-width:1.6}
+    .card-loc svg{width:11px;height:11px;stroke:var(--gold);fill:none;stroke-width:2.2;flex-shrink:0}
+
+    /* CARD AS LINK */
+    a.card{display:block;color:inherit}
+    a.card:hover{color:inherit}
+
+    /* ENHANCED CARD */
+    .card{cursor:pointer}
+    .card:hover .card-link{color:var(--gold)}
+    .card:hover .card-link svg{transform:translateX(4px)}
+
+    /* MAGNETIC BTN */
+    .btn{transform-style:preserve-3d}
+    .btn-gold::after{content:'';position:absolute;inset:0;border-radius:inherit;background:rgba(255,255,255,.12);opacity:0;transition:opacity .3s}
+    .btn-gold:hover::after{opacity:1}
+
     /* RESPONSIVE */
     @media(max-width:1024px){
       .hero-inner{grid-template-columns:1fr;text-align:center}
@@ -375,6 +405,8 @@
   </style>
 </head>
 <body>
+<div id="scrollProgress"></div>
+<div id="cursorGlow"></div>
 
 <!-- NAV -->
 <nav class="nav" id="nav">
@@ -492,10 +524,10 @@
         <p>Infinity Legacy es una firma de desarrollo estratégico internacional que convierte grandes ideas en proyectos de alto impacto. Operamos en México y Dubai, conectando oportunidades de participación premium con tecnología de vanguardia.</p>
         <p>Nuestra misión es clara: desarrollar proyectos internacionales bajo estándares de excelencia, con transparencia total y una estructura que proteja a todos los participantes.</p>
         <div class="pillars">
-          <div class="pillar r d1"><div class="pillar-ico">🎯</div><h4>Claridad estratégica</h4><p>Cada proyecto parte de una visión sólida y un plan ejecutable.</p></div>
-          <div class="pillar r d2"><div class="pillar-ico">⚡</div><h4>Ejecución impecable</h4><p>Equipos especializados con experiencia en mercados internacionales.</p></div>
-          <div class="pillar r d3"><div class="pillar-ico">🤝</div><h4>Soporte continuo</h4><p>Acompañamiento desde la concepción hasta la entrega final.</p></div>
-          <div class="pillar r d4"><div class="pillar-ico">🔗</div><h4>Transparencia total</h4><p>Tecnología blockchain para seguimiento en tiempo real.</p></div>
+          <div class="pillar r d1"><div class="pillar-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="var(--dark)"/></svg></div><h4>Claridad estratégica</h4><p>Cada proyecto parte de una visión sólida y un plan ejecutable.</p></div>
+          <div class="pillar r d2"><div class="pillar-ico"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div><h4>Ejecución impecable</h4><p>Equipos especializados con experiencia en mercados internacionales.</p></div>
+          <div class="pillar r d3"><div class="pillar-ico"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg></div><h4>Soporte continuo</h4><p>Acompañamiento desde la concepción hasta la entrega final.</p></div>
+          <div class="pillar r d4"><div class="pillar-ico"><svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></div><h4>Transparencia total</h4><p>Tecnología blockchain para seguimiento en tiempo real.</p></div>
         </div>
       </div>
     </div>
@@ -535,21 +567,21 @@
     <div class="token-grid">
       <div class="token-vis rl">
         <div class="t-ring"></div><div class="t-ring"></div><div class="t-ring"></div>
-        <div class="t-core"><div class="t-core-ico">⛓️</div><div class="t-core-txt">RC20<br/>Token</div></div>
-        <div class="t-node" title="Transparencia">🔍</div>
-        <div class="t-node" title="Liquidez">💧</div>
-        <div class="t-node" title="Acceso global">🌍</div>
-        <div class="t-node" title="Seguridad">🔒</div>
+        <div class="t-core"><svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg><div class="t-core-txt">RC20<br/>Token</div></div>
+        <div class="t-node" title="Transparencia"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
+        <div class="t-node" title="Liquidez"><svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"/></svg></div>
+        <div class="t-node" title="Acceso global"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg></div>
+        <div class="t-node" title="Seguridad"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
       </div>
       <div class="rr">
         <span class="label">Innovación</span>
         <h2>Tokenización<br/><em class="gold">inmobiliaria</em></h2>
         <p>Dividimos propiedades de alto valor en tokens digitales, permitiendo participar en proyectos premium antes inaccesibles. Tecnología Ethereum-compatible (RC20) con transparencia en tiempo real.</p>
         <div class="t-feats">
-          <div class="t-feat r d1"><div class="t-feat-ico">🔍</div><h4>Transparencia estructural</h4><p>Seguimiento en tiempo real de cada proyecto en blockchain.</p></div>
-          <div class="t-feat r d2"><div class="t-feat-ico">💧</div><h4>Liquidez potencial</h4><p>Estructuras eficientes que facilitan la transferencia de participaciones.</p></div>
-          <div class="t-feat r d3"><div class="t-feat-ico">🌍</div><h4>Acceso internacional</h4><p>Invierte en México y Dubai desde cualquier parte del mundo.</p></div>
-          <div class="t-feat r d4"><div class="t-feat-ico">🔒</div><h4>Menos intermediarios</h4><p>Contratos inteligentes que reducen costos y aumentan eficiencia.</p></div>
+          <div class="t-feat r d1"><div class="t-feat-ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div><h4>Transparencia estructural</h4><p>Seguimiento en tiempo real de cada proyecto en blockchain.</p></div>
+          <div class="t-feat r d2"><div class="t-feat-ico"><svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"/></svg></div><h4>Liquidez potencial</h4><p>Estructuras eficientes que facilitan la transferencia de participaciones.</p></div>
+          <div class="t-feat r d3"><div class="t-feat-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg></div><h4>Acceso internacional</h4><p>Participa en proyectos en México y Dubai desde cualquier parte del mundo.</p></div>
+          <div class="t-feat r d4"><div class="t-feat-ico"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div><h4>Menos intermediarios</h4><p>Contratos inteligentes que reducen costos y aumentan eficiencia.</p></div>
         </div>
         <a href="#contacto" class="btn btn-gold" style="margin-top:2.5rem">Conocer más</a>
       </div>
@@ -662,9 +694,9 @@
         <h2>Hablemos de<br/><em class="gold">tu próximo proyecto</em></h2>
         <p>Agenda una consulta sin costo con nuestro equipo. Analizamos tu perfil y presentamos las oportunidades más alineadas a tus objetivos.</p>
         <div class="c-methods">
-          <a href="https://wa.me/521XXXXXXXXXX" class="c-method" target="_blank" rel="noopener"><div class="c-ico">💬</div><div><div class="c-lbl">WhatsApp</div><div class="c-val">Respuesta inmediata</div></div></a>
-          <div class="c-method"><div class="c-ico">📧</div><div><div class="c-lbl">Email</div><div class="c-val">contacto@infinitylegacy.io</div></div></div>
-          <div class="c-method"><div class="c-ico">🌍</div><div><div class="c-lbl">Operaciones</div><div class="c-val">México · Dubai · Internacional</div></div></div>
+          <a href="https://wa.me/521XXXXXXXXXX" class="c-method" target="_blank" rel="noopener"><div class="c-ico"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div><div><div class="c-lbl">WhatsApp</div><div class="c-val">Respuesta inmediata</div></div></a>
+          <div class="c-method"><div class="c-ico"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div><div><div class="c-lbl">Email</div><div class="c-val">contacto@infinitylegacy.io</div></div></div>
+          <div class="c-method"><div class="c-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg></div><div><div class="c-lbl">Operaciones</div><div class="c-val">México · Dubai · Internacional</div></div></div>
         </div>
       </div>
       <div class="form-box rr">
@@ -690,7 +722,7 @@
             <div class="f-grp full"><label class="f-lbl" for="msg">Mensaje *</label><textarea class="f-ta" id="msg" name="message" placeholder="Cuéntanos sobre tus objetivos y el proyecto que te interesa..." required></textarea></div>
           </div>
           <button type="submit" class="f-sub">Enviar consulta →</button>
-          <p class="f-note">🔒 Tu información es confidencial y nunca será compartida.</p>
+          <p class="f-note">Tu información es confidencial y nunca será compartida.</p>
         </form>
       </div>
     </div>
@@ -705,9 +737,9 @@
         <img src="images/logo-white.webp" alt="Infinity Legacy" width="140" height="38" loading="lazy" />
         <p>Firma de desarrollo estratégico internacional. Construimos legados con visión, tecnología y excelencia.</p>
         <div class="ft-socials">
-          <a href="#" class="ft-soc" aria-label="Instagram">📷</a>
-          <a href="#" class="ft-soc" aria-label="LinkedIn">💼</a>
-          <a href="#" class="ft-soc" aria-label="WhatsApp">💬</a>
+          <a href="#" class="ft-soc" aria-label="Instagram"><svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.2" fill="rgba(255,255,255,.65)" stroke="none"/></svg></a>
+          <a href="#" class="ft-soc" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="rgba(255,255,255,.65)" stroke="none"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg></a>
+          <a href="https://wa.me/521XXXXXXXXXX" class="ft-soc" aria-label="WhatsApp" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></a>
         </div>
       </div>
       <div class="ft-col"><h5>Proyectos</h5><ul><li><a href="projects/luxury-clinics.html">Luxury Clinics</a></li><li><a href="projects/azizi-venice.html">Azizi Venice</a></li><li><a href="projects/monte-vinum.html">Monte Vinum</a></li><li><a href="projects/kukulkan.html">The Jungle Kukulkán</a></li><li><a href="projects/hospital.html">Hospital Real de Ángeles</a></li><li><a href="projects/town-houses.html">Town Houses Puerto Ángel</a></li><li><a href="projects/citrus-limones.html">Citrus Limones</a></li></ul></div>
@@ -763,7 +795,8 @@ const PROJECTS = [
 function buildProjects() {
   const g = document.getElementById('projGrid');
   PROJECTS.forEach((p, i) => {
-    const card = document.createElement('article');
+    const card = document.createElement('a');
+    card.href = p.url || '#contacto';
     card.className = 'card r' + (p.feat ? ' feat' : '') + (i ? ' d'+Math.min(i,6) : '');
 
     const slides = p.imgs.map((src,j)=>`
@@ -772,6 +805,9 @@ function buildProjects() {
       </div>`).join('');
 
     const dots = p.imgs.map((_,j)=>`<button class="car-dot${j===0?' on':''}" aria-label="Imagen ${j+1}"></button>`).join('');
+
+    const pinSvg = `<svg viewBox="0 0 24 24"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0112 2a8 8 0 018 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>`;
+    const arrowSvg = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 6.5h9M7.5 3l3 3.5-3 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
     card.innerHTML = `
       <div class="car">
@@ -785,10 +821,10 @@ function buildProjects() {
         <div class="car-dots">${dots}</div>
       </div>
       <div class="card-body">
-        <div class="card-loc">📍 ${p.location}</div>
+        <div class="card-loc">${pinSvg} ${p.location}</div>
         <h3>${p.title}</h3>
         <p>${p.desc}</p>
-        <a href="${p.url || '#contacto'}" class="card-link">Ver proyecto <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 6.5h9M7.5 3l3 3.5-3 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <span class="card-link">Ver proyecto ${arrowSvg}</span>
       </div>`;
 
     g.appendChild(card);
@@ -811,9 +847,9 @@ function initCarousel(card, total) {
   };
   const start = () => { clearInterval(timer); timer = setInterval(() => go(cur+1), 4000); };
 
-  next.addEventListener('click', e => { e.preventDefault(); go(cur+1); start(); });
-  prev.addEventListener('click', e => { e.preventDefault(); go(cur-1); start(); });
-  dots.forEach((d,i) => d.addEventListener('click', () => { go(i); start(); }));
+  next.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); go(cur+1); start(); });
+  prev.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); go(cur-1); start(); });
+  dots.forEach((d,i) => d.addEventListener('click', e => { e.stopPropagation(); go(i); start(); }));
 
   const car = track.closest('.car');
   car.addEventListener('mouseenter', () => clearInterval(timer));
@@ -911,6 +947,58 @@ function initForm() {
 // WHATSAPP FLOAT
 const wa = document.getElementById('wa');
 window.addEventListener('scroll', () => wa.classList.toggle('on', scrollY > 400), {passive:true});
+
+// SCROLL PROGRESS BAR
+const progressBar = document.getElementById('scrollProgress');
+window.addEventListener('scroll', () => {
+  const total = document.documentElement.scrollHeight - window.innerHeight;
+  if(total > 0) progressBar.style.transform = `scaleX(${scrollY / total})`;
+}, {passive:true});
+
+// CURSOR GLOW
+const glow = document.getElementById('cursorGlow');
+let glowX = 0, glowY = 0, rafGlow;
+document.addEventListener('mousemove', e => {
+  glowX = e.clientX; glowY = e.clientY;
+  glow.style.opacity = '1';
+  cancelAnimationFrame(rafGlow);
+  rafGlow = requestAnimationFrame(() => {
+    glow.style.left = glowX + 'px';
+    glow.style.top  = glowY + 'px';
+  });
+});
+document.addEventListener('mouseleave', () => { glow.style.opacity = '0'; });
+
+// HERO PARALLAX
+(function(){
+  const heroSection = document.querySelector('.hero');
+  const hiImgs = document.querySelectorAll('.hi img');
+  if(!heroSection || !hiImgs.length) return;
+  document.addEventListener('mousemove', e => {
+    const r = heroSection.getBoundingClientRect();
+    if(e.clientY < r.top || e.clientY > r.bottom) return;
+    const mx = (e.clientX / window.innerWidth - .5) * 2;
+    const my = (e.clientY / window.innerHeight - .5) * 2;
+    hiImgs.forEach((img, i) => {
+      const d = (i + 1) * 9;
+      img.style.transform = `translate(${mx * d * .5}px,${my * d * .3}px) scale(1.06)`;
+    });
+  });
+  heroSection.addEventListener('mouseleave', () => {
+    hiImgs.forEach(img => img.style.transform = 'scale(1)');
+  });
+})();
+
+// MAGNETIC BUTTONS
+document.querySelectorAll('.btn-gold').forEach(btn => {
+  btn.addEventListener('mousemove', e => {
+    const r = btn.getBoundingClientRect();
+    const x = e.clientX - r.left - r.width/2;
+    const y = e.clientY - r.top  - r.height/2;
+    btn.style.transform = `translateY(-2px) translate(${x*.2}px,${y*.2}px)`;
+  });
+  btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
+});
 
 // SMOOTH SCROLL
 document.querySelectorAll('a[href^="#"]').forEach(a => {

@@ -85,7 +85,7 @@ p{font-size:clamp(.88rem,1.3vw,1.02rem);color:var(--gray);line-height:1.82}
 .feat::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),var(--gold-light));transform:scaleX(0);transform-origin:left;transition:transform .4s ease}
 .feat:hover::before{transform:scaleX(1)}
 .feat:hover{box-shadow:var(--shadow-md);transform:translateY(-4px)}
-.feat-ico{font-size:2rem;margin-bottom:1rem}
+.feat-ico{font-size:0;width:32px;height:2px;background:var(--gold);border-radius:1px;margin-bottom:1.25rem}
 .feat h4{margin-bottom:.6rem}
 .feat p{font-size:.85rem;color:var(--gray-light)}
 
@@ -114,10 +114,12 @@ p{font-size:clamp(.88rem,1.3vw,1.02rem);color:var(--gray);line-height:1.82}
 .location h2{margin-bottom:1.25rem}
 .location p{margin-bottom:1.2rem}
 .loc-list{display:flex;flex-direction:column;gap:.75rem;margin-top:1.5rem}
-.loc-list li{font-size:.92rem;color:var(--gray);padding:.75rem 1rem;background:var(--white);border-radius:var(--r);border:1px solid var(--border)}
+.loc-list li{font-size:.92rem;color:var(--gray);padding:.75rem 1rem 0.75rem 2.25rem;background:var(--white);border-radius:var(--r);border:1px solid var(--border);position:relative}
+.loc-list li::before{content:'';position:absolute;left:1rem;top:50%;transform:translateY(-50%);width:6px;height:6px;border-radius:50%;background:var(--gold)}
 .loc-card{background:var(--dark);border-radius:var(--r-xl);padding:2.5rem;box-shadow:var(--shadow-lg)}
 .loc-badge{display:flex;align-items:center;gap:14px;padding-bottom:1.75rem;margin-bottom:1.75rem;border-bottom:1px solid rgba(255,255,255,.1)}
-.lb-ico{width:48px;height:48px;border-radius:50%;background:rgba(199,167,108,.15);border:1px solid rgba(199,167,108,.3);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.lb-ico{width:48px;height:48px;border-radius:50%;background:rgba(199,167,108,.15);border:1px solid rgba(199,167,108,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.lb-ico svg{width:20px;height:20px;stroke:var(--gold);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .lb-title{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--white);font-weight:500}
 .lb-sub{font-size:.78rem;color:rgba(255,255,255,.45);margin-top:2px}
 .loc-stats{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
