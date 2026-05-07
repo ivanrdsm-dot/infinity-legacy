@@ -139,7 +139,7 @@
     }, sec * 1000);
   });
 
-  /* ────── 6) UTM persistence (commit 3 expandirá esto a propagación a WhatsApp) ────── */
+  /* ────── 6) UTM persistence ────── */
   try {
     var params = new URLSearchParams(window.location.search);
     var utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid', 'ttclid'];
@@ -158,6 +158,112 @@
       if (stored) window.IL_TRACKING.utms = JSON.parse(stored);
     }
   } catch (e) { /* sessionStorage may be blocked */ }
+
+  /* ────── 7) UTM propagation to WhatsApp links (closed-loop attribution) ──────
+   * Cuando el visitante llega con UTMs (= viene de un anuncio), reescribimos
+   * TODOS los links de WhatsApp del sitio para que el mensaje pre-llenado
+   * incluya un marcador [il-ref: ...] con el origen exacto.
+   *
+   * Resultado: el agente que recibe el WA sabe qué anuncio cerró el lead.
+   * Esto es LO QUE NADIE HACE BIEN en LATAM y nos da atribución end-to-end.
+   */
+  function buildRefString() {
+    var u = window.IL_TRACKING.utms;
+    if (!u) return null;
+    var parts = [];
+    if (u.utm_source)   parts.push('src=' + u.utm_source);
+    if (u.utm_medium)   parts.push('med=' + u.utm_medium);
+    if (u.utm_campaign) parts.push('cmp=' + u.utm_campaign);
+    if (u.utm_content)  parts.push('cnt=' + u.utm_content);
+    if (u.utm_term)     parts.push('trm=' + u.utm_term);
+    if (u.fbclid)       parts.push('fbc=' + u.fbclid.substring(0, 24));
+    if (u.gclid)        parts.push('gcl=' + u.gclid.substring(0, 24));
+    if (u.ttclid)       parts.push('ttc=' + u.ttclid.substring(0, 24));
+    if (currentProject) parts.push('pg=' + currentProject.toLowerCase().replace(/\s+/g, '-'));
+    if (parts.length === 0) return null;
+    return '[il-ref: ' + parts.join(' ') + ']';
+  }
+
+  function rewriteWhatsAppLinks() {
+    var ref = buildRefString();
+    if (!ref) return; // No hay UTMs → no reescribimos (visita orgánica)
+
+    var selectors = [
+      'a[href*="wa.me"]',
+      'a[href*="api.whatsapp.com"]',
+      'a[href*="whatsapp://"]'
+    ].join(', ');
+
+    var links = document.querySelectorAll(selectors);
+    var rewritten = 0;
+    links.forEach(function (link) {
+      try {
+        var href = link.getAttribute('href');
+        if (!href || href.indexOf('[il-ref:') !== -1) return; // ya tiene ref
+
+        // wa.me/<num>?text=... | api.whatsapp.com/send?phone=<num>&text=...
+        var url;
+        if (href.indexOf('whatsapp://') === 0) {
+          // Custom scheme — parsear manual
+          var match = href.match(/text=([^&]*)/);
+          var existingText = match ? decodeURIComponent(match[1]) : '';
+          var newText = existingText ? existingText + '\n\n' + ref : ref;
+          var newHref = match
+            ? href.replace(/text=[^&]*/, 'text=' + encodeURIComponent(newText))
+            : href + (href.indexOf('?') === -1 ? '?' : '&') + 'text=' + encodeURIComponent(newText);
+          link.setAttribute('href', newHref);
+        } else {
+          // wa.me / api.whatsapp.com — usar URL parser
+          url = new URL(href, window.location.origin);
+          var existingText = url.searchParams.get('text') || '';
+          var newText = existingText ? existingText + '\n\n' + ref : ref;
+          url.searchParams.set('text', newText);
+          link.setAttribute('href', url.toString());
+        }
+        rewritten++;
+      } catch (e) { /* malformed URL — skip */ }
+    });
+
+    if (rewritten > 0) {
+      track('WhatsAppLinksRewritten', {
+        count: rewritten,
+        ref: ref
+      });
+    }
+  }
+
+  // Ejecutar cuando el DOM esté listo
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', rewriteWhatsAppLinks);
+  } else {
+    rewriteWhatsAppLinks();
+  }
+
+  // Re-ejecutar si se agregan links dinámicamente (SPAs, lazy load, etc.)
+  if (window.MutationObserver) {
+    var observer = new MutationObserver(function (mutations) {
+      var hasNewLinks = mutations.some(function (m) {
+        return Array.from(m.addedNodes).some(function (n) {
+          return n.nodeType === 1 && (
+            (n.matches && n.matches('a[href*="wa.me"], a[href*="api.whatsapp.com"]')) ||
+            (n.querySelectorAll && n.querySelectorAll('a[href*="wa.me"], a[href*="api.whatsapp.com"]').length > 0)
+          );
+        });
+      });
+      if (hasNewLinks) rewriteWhatsAppLinks();
+    });
+    if (document.body) {
+      observer.observe(document.body, { childList: true, subtree: true });
+    } else {
+      document.addEventListener('DOMContentLoaded', function () {
+        observer.observe(document.body, { childList: true, subtree: true });
+      });
+    }
+  }
+
+  // Expose for manual re-trigger / debugging
+  window.IL_TRACKING.rewriteWhatsApp = rewriteWhatsAppLinks;
+  window.IL_TRACKING.buildRef = buildRefString;
 
   /* ────── Debug log (remover en producción si molesta) ────── */
   if (window.console && window.console.log) {
