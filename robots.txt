@@ -1,0 +1,46 @@
+# robots.txt — Infinity Legacy
+# Permitimos explícitamente a todos los crawlers de redes sociales para que puedan
+# leer Open Graph, Twitter Cards y verificación de dominio.
+
+User-agent: *
+Allow: /
+
+# Meta / Facebook crawlers — verificación de dominio + Open Graph para anuncios
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: facebookcatalog
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+User-agent: Facebot
+Allow: /
+
+# Google
+User-agent: Googlebot
+Allow: /
+
+# Twitter / X
+User-agent: Twitterbot
+Allow: /
+
+# LinkedIn
+User-agent: LinkedInBot
+Allow: /
+
+# Slack
+User-agent: Slackbot
+Allow: /
+
+# WhatsApp
+User-agent: WhatsApp
+Allow: /
+
+# TikTok
+User-agent: TikTokSpider
+Allow: /
+
+# Sitemap
+Sitemap: https://www.infinitylegacy.io/sitemap.xml
