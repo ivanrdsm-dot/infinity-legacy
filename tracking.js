@@ -43,18 +43,72 @@
     }
   }
 
-  /* ────── Helper unificado: dispara fbq + dataLayer ────── */
-  var STANDARD_EVENTS = ['ViewContent', 'Lead', 'InitiateCheckout', 'Contact', 'Purchase', 'CompleteRegistration', 'Search'];
-  function track(eventName, params) {
+  /* ────── Helpers ────── */
+  var STANDARD_EVENTS = ['ViewContent', 'Lead', 'InitiateCheckout', 'Contact', 'Purchase', 'CompleteRegistration', 'Search', 'AddToCart', 'PageView'];
+
+  // Generar event_id único — compartido entre Pixel (browser) y CAPI (server)
+  // para que Meta deduplique correctamente.
+  function generateEventId() {
+    return Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 11);
+  }
+
+  // Leer cookie por nombre (para extraer _fbp y _fbc del Pixel)
+  function getCookie(name) {
+    var match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()\[\]\\\/+^])/g, '\\$1') + '=([^;]*)'));
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+
+  // Enviar evento a Vercel /api/capi → reenvía a Meta CAPI server-side
+  function sendToCAPI(eventName, eventId, customData, piiData) {
+    try {
+      var payload = {
+        event_name: eventName,
+        event_time: Math.floor(Date.now() / 1000),
+        event_id: eventId,
+        event_source_url: window.location.href,
+        custom_data: customData || {},
+        fbp: getCookie('_fbp'),
+        fbc: getCookie('_fbc')
+      };
+      // PII opcional — solo se envía cuando el evento la incluye (ej: form submit)
+      if (piiData) {
+        if (piiData.email)      payload.email      = piiData.email;
+        if (piiData.phone)      payload.phone      = piiData.phone;
+        if (piiData.first_name) payload.first_name = piiData.first_name;
+        if (piiData.last_name)  payload.last_name  = piiData.last_name;
+      }
+
+      // fetch con keepalive — funciona incluso durante navegación/unload
+      fetch('/api/capi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        keepalive: true
+      }).catch(function () { /* silent fail — no romper UX */ });
+    } catch (e) { /* silent fail */ }
+  }
+
+  /* ────── track() — dispara fbq + dataLayer + CAPI con event_id compartido ────── */
+  function track(eventName, params, piiData) {
     params = params || {};
+
+    // Generar event_id ÚNICO compartido (Meta dedupe)
+    var eventId = generateEventId();
+
+    // 1) Pixel (browser-side) con eventID
     if (typeof window.fbq === 'function') {
       if (STANDARD_EVENTS.indexOf(eventName) !== -1) {
-        window.fbq('track', eventName, params);
+        window.fbq('track', eventName, params, { eventID: eventId });
       } else {
-        window.fbq('trackCustom', eventName, params);
+        window.fbq('trackCustom', eventName, params, { eventID: eventId });
       }
     }
-    window.dataLayer.push(Object.assign({ event: eventName }, params));
+
+    // 2) dataLayer (futuro GTM/GA4)
+    window.dataLayer.push(Object.assign({ event: eventName, event_id: eventId }, params));
+
+    // 3) CAPI server-side (paralelo, bypass de adblockers/iOS)
+    sendToCAPI(eventName, eventId, params, piiData);
   }
 
   /* Expose for debugging in DevTools */
@@ -88,17 +142,47 @@
     }
   }, true);
 
-  /* ────── 3) Form submit tracking (Lead event de mayor intención) ────── */
+  /* ────── 3) Form submit tracking (Lead event con PII para CAPI) ────── */
   document.addEventListener('submit', function (e) {
-    if (e.target && e.target.tagName === 'FORM') {
-      track('Lead', {
-        content_name:     'Contact Form - ' + (currentProject || 'Home'),
-        content_category: 'Contact Form',
-        source:           currentProject || 'home',
-        value:            0,
-        currency:         'MXN'
-      });
+    if (!e.target || e.target.tagName !== 'FORM') return;
+
+    var form = e.target;
+    var fd;
+    try { fd = new FormData(form); } catch (err) { fd = null; }
+
+    // Extraer PII por nombres comunes en formularios web
+    function getField(names) {
+      if (!fd) return null;
+      for (var i = 0; i < names.length; i++) {
+        var v = fd.get(names[i]);
+        if (v) return String(v).trim();
+      }
+      // Fallback: buscar por type/name en inputs
+      var inputs = form.querySelectorAll('input, textarea, select');
+      for (var j = 0; j < inputs.length; j++) {
+        var inp = inputs[j];
+        var name = (inp.name || inp.id || '').toLowerCase();
+        for (var k = 0; k < names.length; k++) {
+          if (name.indexOf(names[k]) !== -1 && inp.value) return inp.value.trim();
+        }
+      }
+      return null;
     }
+
+    var pii = {
+      email:      getField(['email', 'correo', 'e-mail', 'mail']),
+      first_name: getField(['name', 'nombre', 'firstname', 'first-name', 'first_name']),
+      last_name:  getField(['lastname', 'apellido', 'apellidos', 'last-name', 'last_name', 'surname']),
+      phone:      getField(['phone', 'telefono', 'teléfono', 'tel', 'celular', 'movil', 'móvil', 'whatsapp'])
+    };
+
+    track('Lead', {
+      content_name:     'Contact Form - ' + (currentProject || 'Home'),
+      content_category: 'Contact Form',
+      source:           currentProject || 'home',
+      value:            0,
+      currency:         'MXN'
+    }, pii); // ← PII se hashea SHA-256 server-side antes de ir a Meta
   }, true);
 
   /* ────── 4) Scroll depth tracking ────── */
