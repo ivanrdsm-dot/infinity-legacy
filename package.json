@@ -1,0 +1,9 @@
+{
+  "name": "infinity-legacy",
+  "version": "1.0.0",
+  "description": "Infinity Legacy — landing site + serverless functions for Meta CAPI tracking",
+  "private": true,
+  "engines": {
+    "node": "20.x"
+  }
+}
