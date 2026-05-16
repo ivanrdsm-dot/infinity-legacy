@@ -202,6 +202,41 @@
     footer.foot{background:#06090D;color:rgba(255,255,255,.5);padding:2.4rem 0;font-size:.76rem;text-align:center;letter-spacing:.04em}
     footer.foot a{color:var(--gold)}
 
+    /* CALCULADORA */
+    .calculadora{background:linear-gradient(135deg,#0A0E15 0%,#1A2030 50%,#15192a 100%);color:var(--white);padding:clamp(5rem,8vw,8rem) 0;position:relative;overflow:hidden}
+    .calculadora::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(199,167,108,.14) 0%,transparent 55%);pointer-events:none}
+    .calculadora h2{color:var(--white);text-align:center;margin-bottom:1rem;position:relative}
+    .calculadora p.intro{color:rgba(255,255,255,.78);text-align:center;max-width:680px;margin:0 auto 3.5rem;position:relative}
+    .calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:start;position:relative;z-index:2}
+    .calc-input,.calc-output{background:rgba(255,255,255,.04);border:1px solid rgba(199,167,108,.18);border-radius:var(--r-lg);padding:2.5rem;backdrop-filter:blur(10px)}
+    .calc-input label{display:block;font-size:.78rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.62);margin-bottom:1rem}
+    .calc-amount-display{font-family:'Playfair Display',serif;font-size:clamp(2.6rem,5vw,3.6rem);color:var(--gold);font-weight:700;line-height:1;margin-bottom:1.6rem}
+    .calc-amount-display .currency{font-size:.55em;color:rgba(255,255,255,.58);margin-right:6px;vertical-align:top}
+    .calc-amount-display .suffix{font-size:.4em;color:rgba(255,255,255,.5);font-weight:400;font-family:'Inter',sans-serif;margin-left:8px}
+    input[type="range"]#calc-slider{width:100%;height:8px;-webkit-appearance:none;background:rgba(255,255,255,.1);border-radius:4px;outline:none;margin-bottom:.5rem;cursor:pointer}
+    input[type="range"]#calc-slider::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:var(--gold);cursor:pointer;border:3px solid var(--dark);box-shadow:var(--shadow-gold);transition:transform .2s}
+    input[type="range"]#calc-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
+    input[type="range"]#calc-slider::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:var(--gold);cursor:pointer;border:3px solid var(--dark);box-shadow:var(--shadow-gold)}
+    .calc-range-labels{display:flex;justify-content:space-between;font-size:.74rem;color:rgba(255,255,255,.5);margin-top:.5rem;letter-spacing:.05em}
+    .calc-toggle{display:flex;gap:.5rem;background:rgba(11,15,20,.5);padding:6px;border-radius:50px;border:1px solid rgba(199,167,108,.14)}
+    .calc-toggle button{flex:1;padding:11px 18px;border:none;background:transparent;color:rgba(255,255,255,.65);font-size:.86rem;font-weight:600;border-radius:50px;cursor:pointer;transition:var(--ease);letter-spacing:.04em}
+    .calc-toggle button.active{background:var(--gold);color:var(--dark);box-shadow:0 4px 16px rgba(199,167,108,.32)}
+    .calc-plan-badge{display:inline-block;padding:8px 22px;background:var(--gold);color:var(--dark);font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;letter-spacing:.18em;border-radius:50px;margin-bottom:1.4rem;transition:background .35s}
+    .calc-plan-rate{font-size:.74rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.58);margin-bottom:.5rem}
+    .calc-plan-pct{font-family:'Playfair Display',serif;font-size:clamp(2.8rem,5vw,4rem);font-weight:700;color:var(--gold);line-height:1;margin-bottom:.4rem}
+    .calc-plan-pct .pct-suffix{font-size:.36em;color:rgba(255,255,255,.72);font-family:'Inter',sans-serif;font-weight:500;margin-left:6px;letter-spacing:.04em}
+    .calc-plan-annual{display:inline-block;padding:6px 16px;background:rgba(199,167,108,.14);color:var(--gold);font-size:.84rem;font-weight:600;border-radius:30px;border:1px solid rgba(199,167,108,.25);margin-bottom:1.8rem;letter-spacing:.04em}
+    .calc-projection{padding:1.4rem 1.6rem;background:rgba(11,15,20,.5);border-radius:var(--r);border-left:3px solid var(--gold);margin-bottom:1.8rem}
+    .calc-row{display:flex;justify-content:space-between;align-items:center;padding:.6rem 0;font-size:.92rem;color:rgba(255,255,255,.85)}
+    .calc-row + .calc-row{border-top:1px solid rgba(255,255,255,.08)}
+    .calc-row strong{color:var(--gold);font-family:'Playfair Display',serif;font-size:1.18em;font-weight:700;letter-spacing:.01em}
+    .calc-wa-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:18px 28px;background:#25D366;color:var(--white);border:none;border-radius:50px;font-size:1rem;font-weight:600;cursor:pointer;text-decoration:none;transition:var(--ease);letter-spacing:.02em;box-shadow:0 8px 24px rgba(37,211,102,.35)}
+    .calc-wa-btn:hover{background:#1ebe5a;transform:translateY(-3px);box-shadow:0 14px 32px rgba(37,211,102,.45)}
+    .calc-wa-btn .wa-emoji{font-size:1.3em}
+    .calc-disclaimer{margin-top:1.4rem;font-size:.74rem;line-height:1.7;color:rgba(255,255,255,.55);font-style:italic;text-align:center}
+    .calc-microcopy{margin-top:1.6rem;text-align:center;color:rgba(255,255,255,.62);font-size:.84rem}
+    .calc-microcopy strong{color:var(--gold);font-weight:600}
+
     /* SCROLL REVEAL */
     .r{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s ease}
     .r.on{opacity:1;transform:none}
@@ -214,6 +249,7 @@
       .dist-card.featured{grid-column:span 2;transform:none}
       .planes-grid{grid-template-columns:1fr 1fr;gap:1rem}
       .plan.featured{transform:none}
+      .calc-grid{grid-template-columns:1fr;gap:2rem}
       .diversif-grid{grid-template-columns:repeat(2,1fr)}
       .pareto-grid{grid-template-columns:1fr;gap:2rem}
       .traza-flow{grid-template-columns:1fr 1fr;gap:.8rem}
@@ -240,7 +276,7 @@
       <a href="/" class="brand">Infinity Legacy</a>
       <div class="nav-actions">
         <a href="/">Inicio</a>
-        <a class="btn btn-gold" style="padding:10px 22px;font-size:.82rem" href="https://wa.me/525519385348?text=Hola%20Infinity%20Legacy%2C%20quiero%20conocer%20el%20Programa%20de%20Acceso%20%5Bil-ref%3A%20src%3Dprograma-acceso%5D" target="_blank" rel="noopener">Hablar por WhatsApp</a>
+        <a class="btn btn-gold" style="padding:10px 22px;font-size:.82rem" href="https://wa.me/525566253065?text=Hola%20Infinity%20Legacy%2C%20quiero%20conocer%20el%20Programa%20de%20Acceso%20%5Bil-ref%3A%20src%3Dprograma-acceso%5D" target="_blank" rel="noopener">Hablar por WhatsApp</a>
       </div>
     </div>
   </nav>
@@ -254,7 +290,7 @@
           <h1>Solo el <span class="hl">5%</span> pone su dinero a trabajar.<br/>El resto trabaja por él.</h1>
           <p class="lead">Infiniti Group abre el acceso a un portafolio diversificado en real estate tokenizado, trading institucional y tecnología blockchain. Contrato de mandato con liquidez flexible. Aportación desde $50,000 MXN.</p>
           <div class="hero-actions">
-            <a class="btn btn-gold" href="https://wa.me/525519385348?text=Hola%20Infinity%20Legacy%2C%20quiero%20agendar%20una%20sesi%C3%B3n%20del%20Programa%20de%20Acceso%20%5Bil-ref%3A%20src%3Dprograma-acceso%20cta%3Dhero%5D" target="_blank" rel="noopener" data-cta="hero">Agendar sesión 60 min</a>
+            <a class="btn btn-gold" href="https://wa.me/525566253065?text=Hola%20Infinity%20Legacy%2C%20quiero%20agendar%20una%20sesi%C3%B3n%20del%20Programa%20de%20Acceso%20%5Bil-ref%3A%20src%3Dprograma-acceso%20cta%3Dhero%5D" target="_blank" rel="noopener" data-cta="hero">Agendar sesión 60 min</a>
             <a class="btn btn-outline" href="#planes">Ver los 5 planes</a>
           </div>
         </div>
@@ -369,6 +405,70 @@
         </div>
       </div>
       <p class="planes-note r">* Infiniti Group cobrará un fee del 1% de administración sobre beneficios recibidos al final del contrato. Los resultados pasados no garantizan los beneficios futuros.</p>
+    </div>
+  </section>
+
+  <!-- CALCULADORA INTERACTIVA -->
+  <section class="section calculadora" id="calculadora">
+    <div class="container">
+      <span class="label r" style="display:block;text-align:center;margin:0 auto 1rem;color:var(--gold)">Tu plan a la medida</span>
+      <h2 class="r d1">Calcula tu aportación y plan ideal</h2>
+      <p class="intro r d2">Mueve el control. Te mostramos el plan correspondiente, los resultados operativos variables estimados y agendas directo por WhatsApp con tu información pre-cargada.</p>
+
+      <div class="calc-grid">
+        <div class="calc-input r d1">
+          <label>Aportación que estás considerando</label>
+          <div class="calc-amount-display">
+            <span class="currency">$</span><span id="calc-amount">200,000</span><span class="suffix">MXN</span>
+          </div>
+          <input type="range" id="calc-slider" min="50000" max="3000000" step="10000" value="200000" aria-label="Aportación en MXN">
+          <div class="calc-range-labels">
+            <span>$50,000</span>
+            <span>$3,000,000+</span>
+          </div>
+
+          <label style="margin-top:2.4rem">Vigencia del contrato de mandato</label>
+          <div class="calc-toggle">
+            <button class="active" data-months="12">12 meses</button>
+            <button data-months="24">24 meses</button>
+          </div>
+
+          <p class="calc-microcopy">Todos los planes acceden con <strong>token ERC-20</strong> + <strong>Plan Compuesto Anual</strong>. Liquidez en ventanas 1, 3, 6, 12 y 24 meses.</p>
+        </div>
+
+        <div class="calc-output r d2">
+          <div class="calc-plan-badge" id="calc-plan-name">SILVER</div>
+          <div class="calc-plan-rate">Resultado operativo variable hasta</div>
+          <div class="calc-plan-pct">
+            <span id="calc-pct">2.0</span>%<span class="pct-suffix">mensual</span>
+          </div>
+          <div class="calc-plan-annual" id="calc-plan-annual">Anual hasta 24%</div>
+
+          <div class="calc-projection">
+            <div class="calc-row">
+              <span>Mensual estimado:</span>
+              <strong>$<span id="calc-monthly">4,000</span> MXN</strong>
+            </div>
+            <div class="calc-row">
+              <span>Total <span id="calc-period">12</span> meses estimado:</span>
+              <strong>$<span id="calc-total">48,000</span> MXN</strong>
+            </div>
+            <div class="calc-row">
+              <span>Aportación + total estimado:</span>
+              <strong>$<span id="calc-grand">248,000</span> MXN</strong>
+            </div>
+          </div>
+
+          <a id="calc-wa-btn" class="calc-wa-btn" href="#" target="_blank" rel="noopener" data-cta="calculadora">
+            <span class="wa-emoji">💬</span>
+            <span id="calc-wa-text">Agendar Plan SILVER por WhatsApp</span>
+          </a>
+
+          <p class="calc-disclaimer">
+            * Resultados operativos variables <strong>estimados, no garantizados</strong>. Sujeto a contrato de mandato. Los resultados pasados no garantizan los beneficios futuros. Infiniti Group no es entidad supervisada por la CNBV.
+          </p>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -556,7 +656,7 @@
       <h2 class="r d1">Agenda una sesión de <span class="hl">60 minutos</span></h2>
       <p class="r d2">Conoce el modelo completo, los 5 planes y resuelve tus dudas con nuestro equipo. Sin compromiso. La sesión está hecha para que tomes decisión informada.</p>
       <div class="cta-actions r d3">
-        <a class="btn btn-wa" href="https://wa.me/525519385348?text=Hola%20Infinity%20Legacy%2C%20quiero%20agendar%20una%20sesi%C3%B3n%20de%2060%20minutos%20sobre%20el%20Programa%20de%20Acceso%20%5Bil-ref%3A%20src%3Dprograma-acceso%20cta%3Dfinal%5D" target="_blank" rel="noopener" data-cta="final">
+        <a class="btn btn-wa" href="https://wa.me/525566253065?text=Hola%20Infinity%20Legacy%2C%20quiero%20agendar%20una%20sesi%C3%B3n%20de%2060%20minutos%20sobre%20el%20Programa%20de%20Acceso%20%5Bil-ref%3A%20src%3Dprograma-acceso%20cta%3Dfinal%5D" target="_blank" rel="noopener" data-cta="final">
             💬 Agendar por WhatsApp
         </a>
         <a class="btn btn-outline" href="/">Ver los proyectos inmobiliarios</a>
@@ -614,14 +714,94 @@
       document.querySelectorAll('[data-cta]').forEach((el) => {
         el.addEventListener('click', () => {
           if (typeof fbq !== 'undefined') {
-            fbq('track', 'Lead', {
-              content_name: 'WhatsApp click — Programa Acceso',
-              content_category: el.getAttribute('data-cta')
-            });
+            const cta = el.getAttribute('data-cta');
+            const extra = {};
+            // Si es la calculadora, incluye plan + valor en el evento Lead
+            if (cta === 'calculadora') {
+              extra.value = parseInt(document.getElementById('calc-slider').value);
+              extra.currency = 'MXN';
+              extra.content_name = 'Calculadora — Plan ' + document.getElementById('calc-plan-name').textContent;
+              extra.content_category = 'calculadora-' + document.getElementById('calc-plan-name').textContent.toLowerCase().replace(' ', '').replace('+', 'plus');
+            } else {
+              extra.content_name = 'WhatsApp click — Programa Acceso';
+              extra.content_category = cta;
+            }
+            fbq('track', 'Lead', extra);
           }
         });
       });
     });
+
+    // ────────────── CALCULADORA INTERACTIVA ──────────────
+    (function initCalc() {
+      const PLANS = [
+        { min: 50000,   max: 199999,    name: 'BRONZE',      slug: 'bronze',     monthly: 1.5, annual: 18, color: '#C68B5B' },
+        { min: 200000,  max: 399999,    name: 'SILVER',      slug: 'silver',     monthly: 2.0, annual: 24, color: '#C9CAD0' },
+        { min: 400000,  max: 699999,    name: 'GOLD',        slug: 'gold',       monthly: 2.5, annual: 30, color: '#C7A76C' },
+        { min: 700000,  max: 999999,    name: 'BLACK',       slug: 'black',      monthly: 3.0, annual: 36, color: '#1A2030' },
+        { min: 1000000, max: Infinity,  name: 'BLACK MORE+', slug: 'blackmoreplus', monthly: 3.5, annual: 42, color: '#A8843D' },
+      ];
+
+      const slider   = document.getElementById('calc-slider');
+      const amountEl = document.getElementById('calc-amount');
+      const nameEl   = document.getElementById('calc-plan-name');
+      const pctEl    = document.getElementById('calc-pct');
+      const annualEl = document.getElementById('calc-plan-annual');
+      const monthlyEl= document.getElementById('calc-monthly');
+      const totalEl  = document.getElementById('calc-total');
+      const grandEl  = document.getElementById('calc-grand');
+      const periodEl = document.getElementById('calc-period');
+      const waBtn    = document.getElementById('calc-wa-btn');
+      const waText   = document.getElementById('calc-wa-text');
+
+      let months = 12;
+
+      function getPlan(amount) {
+        return PLANS.find(p => amount >= p.min && amount <= p.max) || PLANS[0];
+      }
+
+      function formatMxn(n) {
+        return Math.round(n).toLocaleString('es-MX');
+      }
+
+      function update() {
+        const amount  = parseInt(slider.value, 10);
+        const plan    = getPlan(amount);
+        const monthly = amount * (plan.monthly / 100);
+        const total   = monthly * months;
+        const grand   = amount + total;
+
+        amountEl.textContent  = formatMxn(amount);
+        nameEl.textContent    = plan.name;
+        nameEl.style.background = plan.color;
+        nameEl.style.color    = ['BLACK'].includes(plan.name) ? '#fff' : '#0B0F14';
+        pctEl.textContent     = plan.monthly.toFixed(1);
+        annualEl.textContent  = 'Anual hasta ' + plan.annual + '%';
+        monthlyEl.textContent = formatMxn(monthly);
+        totalEl.textContent   = formatMxn(total);
+        grandEl.textContent   = formatMxn(grand);
+        periodEl.textContent  = months;
+        waText.textContent    = 'Agendar Plan ' + plan.name + ' por WhatsApp';
+
+        // Pre-fill WhatsApp message con plan + monto + meses + il-ref único
+        const msg = 'Hola Infinity Legacy, calculé mi plan en su sitio. Quiero aportar $' + formatMxn(amount) +
+                    ' MXN en el Plan ' + plan.name + ' durante ' + months + ' meses. Quiero conocer detalles y agendar sesión. ' +
+                    '[il-ref: src=web cmp=landing-calc ad=calc_plan_' + plan.slug + '_' + amount + '_' + months + 'm]';
+        waBtn.href = 'https://wa.me/525566253065?text=' + encodeURIComponent(msg);
+      }
+
+      slider.addEventListener('input', update);
+      document.querySelectorAll('.calc-toggle button').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.calc-toggle button').forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+          months = parseInt(btn.dataset.months, 10);
+          update();
+        });
+      });
+
+      update();
+    })();
   </script>
 </body>
 </html>
