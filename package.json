@@ -1,10 +1,14 @@
 {
   "name": "infinity-legacy",
-  "version": "1.0.0",
-  "description": "Infinity Legacy — landing site + serverless functions for Meta CAPI tracking",
+  "version": "1.1.0",
+  "description": "Infinity Legacy — landing + CAPI tracking + WhatsApp AI chatbot (Claude Sonnet 4.5 + Supabase)",
   "private": true,
   "type": "module",
   "engines": {
     "node": "20.x"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
+    "@supabase/supabase-js": "^2.45.0"
   }
 }

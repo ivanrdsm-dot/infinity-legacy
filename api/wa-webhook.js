@@ -102,6 +102,15 @@ async function processInboundMessage(msg, contact) {
   const text = msg.text?.body || msg.button?.text || msg.interactive?.button_reply?.title || '[non-text]';
   const wa_message_id = msg.id;
 
+  // ─── IVÁN COMMAND HANDLER ───
+  // Si el mensaje viene del número personal de Iván Y empieza con "/",
+  // lo trato como comando administrativo (NO se lo envío a un lead).
+  const isIvan = from === process.env.IVAN_NOTIFY_NUMBER;
+  if (isIvan && text.trim().startsWith('/')) {
+    await handleIvanCommand(text);
+    return;
+  }
+
   // 1. Find or create lead
   const { lead, isNew } = await upsertLead(from, contact, text);
 
@@ -316,6 +325,89 @@ async function handleBotTool(tool, lead) {
 // ─────────────────────────────────────────────────────────
 // SCHEDULE FOLLOW-UPS (5min / 10min / 30min / 1d / 3d / 7d)
 // ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────
+// IVÁN COMMAND HANDLER
+// Comandos desde su WhatsApp personal para tomar control del bot
+//   /yo [phone]         pausa bot para ese lead (Iván responde manual)
+//   /bot [phone]        re-activa bot
+//   /escalar [phone]    marca priority='urgent'
+//   /cerrar [phone] won pasa a WON
+//   /cerrar [phone] lost pasa a LOST
+//   /nota [phone] [text] nota interna
+// ─────────────────────────────────────────────────────────
+async function handleIvanCommand(text) {
+  const parts = text.trim().split(/\s+/);
+  const cmd = parts[0].toLowerCase().replace(/:$/, ''); // soporta "/yo:"
+  const phone = parts[1];
+  const arg = parts.slice(2).join(' ');
+
+  async function findLead(p) {
+    const { data } = await supabase.from('leads').select('id, wa_phone, wa_name').eq('wa_phone', p).maybeSingle();
+    return data;
+  }
+
+  async function reply(text) {
+    if (process.env.IVAN_NOTIFY_NUMBER) {
+      await sendWaMessage(process.env.IVAN_NOTIFY_NUMBER, text);
+    }
+  }
+
+  const lead = phone ? await findLead(phone) : null;
+  if (phone && !lead) {
+    return reply(`❌ No encontré lead con phone ${phone}`);
+  }
+
+  switch (cmd) {
+    case '/yo':
+      if (!lead) return reply('Usa: /yo [phone]');
+      await supabase.from('leads').update({
+        bot_paused: true, paused_at: new Date().toISOString(), paused_by: 'ivan'
+      }).eq('id', lead.id);
+      await supabase.from('follow_ups')
+        .update({ status: 'cancelled', cancelled_reason: 'ivan_takeover', cancelled_at: new Date().toISOString() })
+        .eq('lead_id', lead.id).eq('status', 'pending');
+      return reply(`✅ Bot pausado para ${lead.wa_name || phone}. A partir de aquí escribes tú.`);
+
+    case '/bot':
+      if (!lead) return reply('Usa: /bot [phone]');
+      await supabase.from('leads').update({ bot_paused: false, paused_at: null }).eq('id', lead.id);
+      return reply(`✅ Bot reactivado para ${lead.wa_name || phone}.`);
+
+    case '/escalar':
+      if (!lead) return reply('Usa: /escalar [phone]');
+      await supabase.from('leads').update({ priority: 'urgent' }).eq('id', lead.id);
+      return reply(`🚨 Lead ${lead.wa_name || phone} marcado como URGENT.`);
+
+    case '/cerrar':
+      if (!lead || !arg) return reply('Usa: /cerrar [phone] won|lost');
+      const outcome = arg.toLowerCase() === 'won' ? 'WON' : 'LOST';
+      await supabase.from('leads').update({ stage: outcome }).eq('id', lead.id);
+      await supabase.from('follow_ups')
+        .update({ status: 'cancelled', cancelled_reason: 'lead_' + outcome.toLowerCase() })
+        .eq('lead_id', lead.id).eq('status', 'pending');
+      return reply(`✅ Lead marcado como ${outcome}.`);
+
+    case '/nota':
+      if (!lead || !arg) return reply('Usa: /nota [phone] [texto de la nota]');
+      await supabase.from('notes').insert({ lead_id: lead.id, author: 'ivan', body: arg, tag: 'manual' });
+      return reply(`✅ Nota guardada para ${lead.wa_name || phone}.`);
+
+    case '/help':
+    case '/ayuda':
+      return reply([
+        '📋 Comandos disponibles:',
+        '/yo [phone] — pausar bot, escribes tú',
+        '/bot [phone] — reactivar bot',
+        '/escalar [phone] — marcar urgente',
+        '/cerrar [phone] won|lost — cerrar lead',
+        '/nota [phone] [texto] — nota interna',
+      ].join('\n'));
+
+    default:
+      return reply(`❌ Comando desconocido: ${cmd}. Escribe /ayuda para ver comandos.`);
+  }
+}
+
 async function scheduleFollowUps(leadId) {
   const now = Date.now();
   const schedule = [
