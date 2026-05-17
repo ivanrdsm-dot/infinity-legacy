@@ -134,6 +134,6 @@ Y desde el dashboard `https://www.infinitylegacy.io/wa-dashboard?t=...` vas a ve
 | ✅ Cron follow-ups /api/wa-cron-followup | LIVE (corre cada 1 min) |
 | ✅ Dashboard /wa-dashboard | LIVE (ves conversaciones reales) |
 | 🟡 WhatsApp Cloud API conectado al bot | Bloqueado por Business Verification |
-| 🟡 Número 5566253065 enviando/recibiendo via webhook | Bloqueado por Business Verification |
+| 🟡 Número 5611357074 enviando/recibiendo via webhook | Bloqueado por Business Verification |
 
 Cuando pase Business Verification, en 30 minutos conectamos lo último y el sistema está en producción completa.

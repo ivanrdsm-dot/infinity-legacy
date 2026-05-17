@@ -38,7 +38,7 @@
 
 ### Paso 3 — Configurar WhatsApp Cloud API (post Business Verification)
 
-1. **Meta Business Manager → WhatsApp Accounts → Conectar número** (5566253065)
+1. **Meta Business Manager → WhatsApp Accounts → Conectar número** (5611357074)
 2. **Meta for Developers → Tu App → WhatsApp → API Setup**
 3. Copiar:
    - `Phone Number ID` → variable `WA_PHONE_NUMBER_ID`
@@ -67,7 +67,7 @@ SUPABASE_URL=https://<project>.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=<service_role_key>
 
 # Operación
-IVAN_NOTIFY_NUMBER=525519385348
+IVAN_NOTIFY_NUMBER=525611357074
 CALENDLY_LINK=https://calendly.com/infinitylegacy/sesion-60min
 CRON_SECRET=<random_string_for_cron_auth>
 ```
@@ -143,7 +143,7 @@ Dashboard de Supabase → Table editor → `leads` → debe aparecer el nuevo le
 
 ## 🎮 Cómo Iván toma control de una conversación
 
-Desde el número personal de Iván (525519385348), enviar al número del bot (5566253065) estos comandos:
+Desde el número personal de Iván (525611357074), enviar al número del bot (5611357074) estos comandos:
 
 | Comando | Acción |
 |---|---|
@@ -192,7 +192,7 @@ El flujo será:
 ```
 [Cliente click ad → wa.me con il-ref]
         ↓
-[Llega mensaje a 5566253065]
+[Llega mensaje a 5611357074]
         ↓
 [/api/wa-webhook recibe]
         ↓
@@ -224,7 +224,7 @@ El flujo será:
 ## ⚠️ Lo que falta de Fase 2 (post-Business Verification)
 
 - [ ] Crear WhatsApp Business Account en el Portfolio
-- [ ] Conectar el número 5566253065
+- [ ] Conectar el número 5611357074
 - [ ] Configurar webhook en Meta
 - [ ] Subir las env vars a Vercel
 - [ ] Test end-to-end con un mensaje real

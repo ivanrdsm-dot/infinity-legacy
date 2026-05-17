@@ -19,7 +19,7 @@
  *   - ANTHROPIC_API_KEY        (Claude API key)
  *   - SUPABASE_URL
  *   - SUPABASE_SERVICE_ROLE_KEY
- *   - IVAN_NOTIFY_NUMBER       (Iván's personal WA para escalations, ej. 525519385348)
+ *   - IVAN_NOTIFY_NUMBER       (Iván's personal WA para escalations, ej. 525611357074)
  *   - CALENDLY_LINK            (link de booking 60min)
  *
  * Documentación Meta:
