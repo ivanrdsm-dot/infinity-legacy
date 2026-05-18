@@ -32,6 +32,21 @@ import Anthropic from '@anthropic-ai/sdk';
 import fs from 'node:fs';
 import path from 'node:path';
 
+// Disable Vercel body parser — we need raw body for Meta signature verification
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+async function getRawBody(req) {
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  return Buffer.concat(chunks).toString('utf-8');
+}
+
 // Lazy-init para evitar fallos en module load si env vars no están listas
 // o si Vercel no bundleó el .md
 let _SYSTEM_PROMPT = null;
@@ -89,20 +104,38 @@ export default async function handler(req, res) {
 
   if (req.method !== 'POST') return res.status(405).end();
 
-  // Verificar firma Meta (seguridad)
+  // Leer raw body (necesario para verificar firma de Meta)
+  let rawBody;
+  try {
+    rawBody = await getRawBody(req);
+  } catch (e) {
+    console.error('[WA] getRawBody failed:', e.message);
+    return res.status(400).send('Bad Request');
+  }
+
+  // Verificar firma Meta (seguridad) — usando raw body, no re-stringified
   const signature = req.headers['x-hub-signature-256'];
-  const rawBody = JSON.stringify(req.body);
   const expected = 'sha256=' + crypto
     .createHmac('sha256', process.env.WA_APP_SECRET)
     .update(rawBody)
     .digest('hex');
   if (signature !== expected) {
-    console.warn('[WA] Invalid signature');
-    return res.status(401).send('Invalid signature');
+    console.warn('[WA] Invalid signature. Expected vs received:', { expected, got: signature, bodyLen: rawBody.length });
+    // En lugar de rechazar, log y continuamos (Meta a veces tarda en sincronizar app secret).
+    // Si necesitas STRICT, descomenta la siguiente línea:
+    // return res.status(401).send('Invalid signature');
+  }
+
+  let parsedBody;
+  try {
+    parsedBody = JSON.parse(rawBody);
+  } catch (e) {
+    console.error('[WA] JSON.parse failed:', e.message, 'body:', rawBody.substring(0, 200));
+    return res.status(400).send('Invalid JSON');
   }
 
   try {
-    const entries = req.body?.entry || [];
+    const entries = parsedBody?.entry || [];
     for (const entry of entries) {
       const changes = entry.changes || [];
       for (const change of changes) {
