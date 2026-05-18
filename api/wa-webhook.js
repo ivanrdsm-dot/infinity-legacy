@@ -31,6 +31,7 @@ import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
 import fs from 'node:fs';
 import path from 'node:path';
+import ws from 'ws';
 
 // Disable Vercel body parser — we need raw body for Meta signature verification
 export const config = {
@@ -72,7 +73,11 @@ function getSupabase() {
   }
   _supabase = createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    {
+      auth: { persistSession: false },
+      realtime: { transport: ws },
+    }
   );
   return _supabase;
 }

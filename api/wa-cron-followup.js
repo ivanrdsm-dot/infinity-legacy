@@ -14,6 +14,7 @@ import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
 import fs from 'node:fs';
 import path from 'node:path';
+import ws from 'ws';
 
 // Lazy-init para serverless
 let _SYSTEM_PROMPT = null;
@@ -32,7 +33,10 @@ let _supabase = null;
 function getSupabase() {
   if (_supabase) return _supabase;
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error('Supabase env missing');
-  _supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  _supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false },
+    realtime: { transport: ws },
+  });
   return _supabase;
 }
 
