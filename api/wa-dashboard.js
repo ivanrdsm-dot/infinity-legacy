@@ -221,6 +221,24 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, stage: outcome });
     }
 
+    // ─── POST: WIPE — limpia TODO (leads, messages, follow_ups, notes, escalations) ───
+    // Requiere body: { confirm: "WIPE_ALL" } para evitar accidentes.
+    if (req.method === 'POST' && action === 'wipe') {
+      const { confirm } = req.body || {};
+      if (confirm !== 'WIPE_ALL') {
+        return res.status(400).json({ error: 'Confirmation required: body must include { "confirm": "WIPE_ALL" }' });
+      }
+      const counts = {};
+      // Orden: tablas dependientes primero (FK), luego leads
+      for (const table of ['messages', 'follow_ups', 'notes', 'escalations']) {
+        const r = await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        counts[table] = r.error ? { error: r.error.message } : (r.count ?? 'ok');
+      }
+      const r = await supabase.from('leads').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      counts.leads = r.error ? { error: r.error.message } : (r.count ?? 'ok');
+      return res.status(200).json({ ok: true, wiped: counts });
+    }
+
     return res.status(400).json({ error: 'Unknown action' });
   } catch (e) {
     console.error('[Dashboard]', e.message);
