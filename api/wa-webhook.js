@@ -337,6 +337,21 @@ async function generateBotResponse(lead) {
     content: m.body,
   }));
 
+  // Funnel-aware hint
+  const funnel = lead.funnel_stage || '';
+  let funnelHint = '';
+  if (funnel === 'bofu') {
+    funnelHint = `\n⚠️ Este lead vino de un anuncio BOFU (cierre). Tono más directo: 2 frases de pitch + ofrece agendar sesión YA. No re-eduques mucho.`;
+  } else if (funnel === 'mofu') {
+    funnelHint = `\n⚠️ Este lead vino de un anuncio MOFU (consideración). Probablemente ya conoce algo. Tono: confirma entendimiento, califica ticket, propón sesión en mensajes 2-3.`;
+  } else if (funnel === 'tofu') {
+    funnelHint = `\n⚠️ Este lead vino de un anuncio TOFU (descubrimiento). Probablemente sabe poco. Tono: educa breve, califica ticket gradualmente, sesión cuando muestre interés concreto.`;
+  } else if (funnel === 'rt') {
+    funnelHint = `\n⚠️ Este lead viene de un retargeting (ya nos vio antes). Reconoce ese contexto sutilmente — "qué bueno que regresas" — y avanza más rápido al cierre.`;
+  }
+
+  const calendlyLink = process.env.CALENDLY_LINK || 'https://calendly.com/infinitylegacy';
+
   // Inject lead context as a system reminder at the end of system prompt
   const leadContext = `
 # 📌 CONTEXTO DE ESTE LEAD ESPECÍFICO
@@ -345,9 +360,17 @@ async function generateBotResponse(lead) {
 - WA Name: ${lead.wa_name || 'desconocido'}
 - Stage actual: ${lead.stage}
 - Plan calculado en web (si lo hizo): ${lead.calc_plan || 'N/A'} con $${lead.calc_amount || 'N/A'} MXN a ${lead.calc_months || 'N/A'} meses
-- Fuente: ${lead.source || 'desconocida'} | Campaña: ${lead.campaign || 'N/A'} | Ad: ${lead.ad_id || 'N/A'}
+- Fuente: ${lead.source || 'desconocida'} | Campaña: ${lead.campaign || 'N/A'} | Ad: ${lead.ad_id || 'N/A'} | Funnel: ${funnel || 'N/A'}
 - Mensajes previos: ${lead.message_count || 0}
 - Lead score: ${lead.lead_score || 0}/100
+${funnelHint}
+
+# 🔗 LINKS REALES (usa estos, NO placeholders)
+- Calendly (para agendar sesión 60min): ${calendlyLink}
+- Calculadora del Programa de Acceso: https://www.infinitylegacy.io/programa-acceso#calculadora
+- Landing principal: https://www.infinitylegacy.io/programa-acceso
+
+⚠️ Cuando el system prompt dice "[CALENDLY_LINK]" o equivalente, SIEMPRE substitúyelo por el link real de arriba. Nunca envíes "[CALENDLY_LINK]" literal al cliente.
 
 Usa este contexto SUTILMENTE. NUNCA digas literal "veo que tu lead score es X" ni "vi que viniste del ad image_narrativa5pct".`;
 
