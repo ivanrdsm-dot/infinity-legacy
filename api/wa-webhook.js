@@ -134,23 +134,35 @@ export default async function handler(req, res) {
     return res.status(400).send('Invalid JSON');
   }
 
+  const debug = req.query.debug === 'true';
+  const log = [];
+  log.push({ step: 'rawBodyLen', value: rawBody.length });
+  log.push({ step: 'parsedBody', value: parsedBody ? 'parsed_ok' : 'null' });
+
   try {
     const entries = parsedBody?.entry || [];
+    log.push({ step: 'entries.length', value: entries.length });
     for (const entry of entries) {
       const changes = entry.changes || [];
+      log.push({ step: 'changes.length', value: changes.length });
       for (const change of changes) {
+        log.push({ step: 'change.field', value: change.field });
         if (change.field !== 'messages') continue;
         const value = change.value;
         const messages = value.messages || [];
+        log.push({ step: 'messages.length', value: messages.length });
         for (const msg of messages) {
+          log.push({ step: 'processInboundMessage_start', value: msg.from });
           await processInboundMessage(msg, value.contacts?.[0]);
+          log.push({ step: 'processInboundMessage_done', value: msg.from });
         }
       }
     }
+    if (debug) return res.status(200).json({ ok: true, log });
     return res.status(200).send('OK');
   } catch (e) {
-    console.error('[WA] Handler error:', e.message);
-    // Devolvemos 200 igualmente para que Meta no reintente y duplique
+    console.error('[WA] Handler error:', e.message, '| stack:', e.stack);
+    if (debug) return res.status(200).json({ ok: false, error: e.message, stack: e.stack, log });
     return res.status(200).send('OK');
   }
 }
@@ -250,22 +262,28 @@ async function processInboundMessage(msg, contact) {
 // UPSERT LEAD
 // ─────────────────────────────────────────────────────────
 async function upsertLead(from, contact, firstMessage) {
-  const { data: existing } = await getSupabase()
+  const sel = await getSupabase()
     .from('leads')
     .select('*')
     .eq('wa_phone', from)
     .maybeSingle();
+  if (sel.error) {
+    console.error('[WA] upsertLead select error:', sel.error);
+    throw new Error('Supabase select failed: ' + sel.error.message);
+  }
+  if (sel.data) return { lead: sel.data, isNew: false };
 
-  if (existing) return { lead: existing, isNew: false };
-
-  const { data: newLead } = await getSupabase().from('leads').insert({
+  const ins = await getSupabase().from('leads').insert({
     wa_phone: from,
     wa_name: contact?.profile?.name || null,
     stage: 'INITIAL',
     first_message_at: new Date().toISOString(),
   }).select().single();
-
-  return { lead: newLead, isNew: true };
+  if (ins.error) {
+    console.error('[WA] upsertLead insert error:', ins.error);
+    throw new Error('Supabase insert failed: ' + ins.error.message);
+  }
+  return { lead: ins.data, isNew: true };
 }
 
 // ─────────────────────────────────────────────────────────
