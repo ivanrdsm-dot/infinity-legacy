@@ -27,7 +27,13 @@
     .topbar .stat .val{font-size:1.05rem;color:var(--gold);font-weight:600}
     .topbar .live{display:flex;align-items:center;gap:6px;font-size:.74rem;color:rgba(255,255,255,.6)}
     .topbar .live .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.5s ease-in-out infinite}
+    .topbar .live .ts{color:rgba(255,255,255,.45);font-size:.7rem;margin-left:6px}
+    .topbar .sound-toggle{cursor:pointer;font-size:.9rem;margin-left:8px;opacity:.7;transition:opacity .15s}
+    .topbar .sound-toggle:hover{opacity:1}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    @keyframes flash{0%{background:rgba(37,211,102,.4)}100%{background:transparent}}
+    .lead-item.new{animation:flash 2.4s ease-out 1}
+    .stat .val.changed{animation:flash 1.8s ease-out 1;border-radius:6px}
 
     /* LAYOUT */
     .app{display:grid;grid-template-columns:340px 1fr;height:calc(100vh - 56px)}
@@ -103,7 +109,7 @@
       <div class="stat"><span class="lbl">Agendados</span><span class="val" id="stat-scheduled">—</span></div>
       <div class="stat"><span class="lbl">🚨 Escalaciones</span><span class="val" id="stat-esc">—</span></div>
     </div>
-    <div class="live"><span class="dot"></span> EN VIVO</div>
+    <div class="live"><span class="dot"></span> EN VIVO <span class="ts" id="last-update">—</span><span class="sound-toggle" id="sound-toggle" title="Sonido al recibir mensaje">🔔</span></div>
   </div>
 
   <div class="app">
@@ -163,25 +169,116 @@
       return r.json();
     }
 
+    // ── Live state tracking ──
+    let prevStats = {};
+    let prevLeadSnapshot = {}; // id → {last_message_at, message_count}
+    let soundOn = JSON.parse(localStorage.getItem('dashSoundOn') ?? 'true');
+    let firstLoad = true;
+
+    function setLastUpdate() {
+      document.getElementById('last-update').textContent = 'actualizado ahora';
+      const t = Date.now();
+      setTimeout(() => {
+        const secs = Math.round((Date.now() - t) / 1000);
+        const el = document.getElementById('last-update');
+        if (el && secs > 0) el.textContent = `hace ${secs}s`;
+      }, 1000);
+    }
+
+    function flashStat(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove('changed');
+      void el.offsetWidth;
+      el.classList.add('changed');
+    }
+
+    function playPing() {
+      if (!soundOn) return;
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sine';
+        o.frequency.setValueAtTime(880, ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.08);
+        g.gain.setValueAtTime(0.25, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        o.start(); o.stop(ctx.currentTime + 0.35);
+      } catch (e) {}
+    }
+
     async function loadStats() {
       try {
         const s = await api('?action=stats');
-        document.getElementById('stat-total').textContent = s.totalLeads ?? '—';
-        document.getElementById('stat-active').textContent = s.activeLeads ?? '—';
-        document.getElementById('stat-scheduled').textContent = s.scheduledLeads ?? '—';
-        document.getElementById('stat-esc').textContent = s.pendingEsc ?? '0';
+        const map = [
+          ['stat-total', s.totalLeads],
+          ['stat-active', s.activeLeads],
+          ['stat-scheduled', s.scheduledLeads],
+          ['stat-esc', s.pendingEsc ?? 0],
+        ];
+        for (const [id, val] of map) {
+          const el = document.getElementById(id);
+          if (!el) continue;
+          const old = el.textContent;
+          const next = (val ?? '—') + '';
+          if (old !== next) {
+            el.textContent = next;
+            if (!firstLoad) flashStat(id);
+          }
+        }
+        prevStats = s;
       } catch (e) { console.error(e); }
     }
 
     async function loadLeads() {
       try {
         const r = await api('?action=list');
-        leads = r.leads || [];
+        const fresh = r.leads || [];
+        // Detect new messages on existing leads
+        let newMsgCount = 0;
+        let newLeadCount = 0;
+        const newSnapshot = {};
+        for (const l of fresh) {
+          newSnapshot[l.id] = {
+            last_message_at: l.last_message_at,
+            message_count: l.message_count || 0,
+          };
+          const prev = prevLeadSnapshot[l.id];
+          if (!prev) {
+            if (!firstLoad) newLeadCount++;
+            l.__isNew = true;
+          } else if (prev.last_message_at !== l.last_message_at && l.last_message_direction === 'inbound') {
+            newMsgCount++;
+            l.__isNew = true;
+          }
+        }
+        leads = fresh;
         renderLeadsList(leads);
+        if (!firstLoad && (newMsgCount > 0 || newLeadCount > 0)) {
+          playPing();
+          if (newLeadCount > 0) toast(`🎉 ${newLeadCount} lead${newLeadCount > 1 ? 's' : ''} nuevo${newLeadCount > 1 ? 's' : ''}`, 'success');
+          else if (newMsgCount > 0) toast(`💬 ${newMsgCount} mensaje${newMsgCount > 1 ? 's' : ''} nuevo${newMsgCount > 1 ? 's' : ''}`, 'success');
+          // Update favicon dot
+          updateFaviconBadge(newMsgCount + newLeadCount);
+        }
+        prevLeadSnapshot = newSnapshot;
+        firstLoad = false;
+        setLastUpdate();
       } catch (e) {
         document.getElementById('leads-list').innerHTML = '<div class="loading">Error cargando</div>';
       }
     }
+
+    // Favicon badge para notificaciones cuando la tab no está visible
+    let unreadCount = 0;
+    function updateFaviconBadge(n) {
+      if (document.hasFocus()) { unreadCount = 0; document.title = 'Infinity Legacy — Bot Dashboard'; return; }
+      unreadCount += n;
+      document.title = `(${unreadCount}) Infinity Legacy — Bot Dashboard`;
+    }
+    window.addEventListener('focus', () => { unreadCount = 0; document.title = 'Infinity Legacy — Bot Dashboard'; });
 
     function renderLeadsList(items) {
       const list = document.getElementById('leads-list');
@@ -191,7 +288,7 @@
       }
       list.classList.remove('loading');
       list.innerHTML = items.map(l => `
-        <div class="lead-item ${l.id === activeLeadId ? 'active' : ''}" data-id="${l.id}">
+        <div class="lead-item ${l.id === activeLeadId ? 'active' : ''} ${l.__isNew ? 'new' : ''}" data-id="${l.id}">
           <div class="lead-head">
             <span class="lead-name">${l.name || l.wa_phone || 'Sin nombre'}</span>
             <span class="lead-time">${timeAgo(l.last_message_at)}</span>
@@ -211,14 +308,19 @@
       });
     }
 
-    async function openConversation(leadId) {
+    async function openConversation(leadId, opts = {}) {
       activeLeadId = leadId;
       document.querySelectorAll('.lead-item').forEach(el => el.classList.toggle('active', el.dataset.id === leadId));
+      // Preserve textarea content + scroll position si es auto-refresh
+      const ta = document.getElementById('reply-text');
+      const preservedInput = opts.preserveInput && ta ? ta.value : null;
+      const body = document.getElementById('convo-body');
+      const wasNearBottom = body ? (body.scrollHeight - body.scrollTop - body.clientHeight < 80) : true;
       const r = await api(`?action=conversation&lead_id=${leadId}`);
-      renderConversation(r);
+      renderConversation(r, { preservedInput, wasNearBottom });
     }
 
-    function renderConversation({ lead, messages, notes, escalations }) {
+    function renderConversation({ lead, messages, notes, escalations }, opts = {}) {
       if (!lead) return;
       const senderLabel = { lead: 'Cliente', bot: '🤖 Bot', ivan: '👤 Iván', system: 'Sistema' };
       const messagesHtml = (messages || []).map(m => `
@@ -249,9 +351,14 @@
           <button id="send-btn" onclick="sendReply()" ${!lead.bot_paused ? 'disabled' : ''}>Enviar</button>
         </div>
       `;
-      // Scroll bottom
+      // Restore textarea content si veníamos de auto-refresh
+      if (opts.preservedInput != null) {
+        const ta = document.getElementById('reply-text');
+        if (ta && !ta.disabled) ta.value = opts.preservedInput;
+      }
+      // Scroll bottom solo si estábamos cerca del bottom (no interrumpir si leen histórico)
       const body = document.getElementById('convo-body');
-      if (body) body.scrollTop = body.scrollHeight;
+      if (body && (opts.wasNearBottom !== false)) body.scrollTop = body.scrollHeight;
     }
 
     function escapeHtml(s) {
@@ -332,14 +439,52 @@
       renderLeadsList(filtered);
     });
 
-    // Initial load + refresh cada 10s
-    loadStats();
-    loadLeads();
-    setInterval(() => {
-      loadStats();
-      loadLeads();
-      if (activeLeadId) openConversation(activeLeadId);
-    }, 10000);
+    // ── Sound toggle ──
+    const soundBtn = document.getElementById('sound-toggle');
+    soundBtn.textContent = soundOn ? '🔔' : '🔕';
+    soundBtn.addEventListener('click', () => {
+      soundOn = !soundOn;
+      localStorage.setItem('dashSoundOn', JSON.stringify(soundOn));
+      soundBtn.textContent = soundOn ? '🔔' : '🔕';
+      if (soundOn) playPing();
+    });
+
+    // ── Live ticker para "hace Xs" ──
+    let lastFetchAt = Date.now();
+    function tickRelative() {
+      const secs = Math.round((Date.now() - lastFetchAt) / 1000);
+      const el = document.getElementById('last-update');
+      if (el) {
+        if (secs < 2) el.textContent = 'ahora';
+        else if (secs < 60) el.textContent = `hace ${secs}s`;
+        else el.textContent = `hace ${Math.floor(secs/60)}m`;
+      }
+    }
+    setInterval(tickRelative, 1000);
+
+    // ── Initial load + refresh cada 3s (en vivo de verdad) ──
+    let lastConvoSig = ''; // signature de la conversación abierta para detectar cambios
+    async function refreshAll() {
+      lastFetchAt = Date.now();
+      const before = prevLeadSnapshot[activeLeadId];
+      await Promise.all([loadStats(), loadLeads()]);
+      // Solo refrescar conversación si hubo cambio detectado en el lead activo
+      if (activeLeadId) {
+        const after = prevLeadSnapshot[activeLeadId];
+        const sig = after ? `${after.last_message_at}|${after.message_count}` : '';
+        if (sig !== lastConvoSig) {
+          lastConvoSig = sig;
+          await openConversation(activeLeadId, { preserveInput: true });
+        }
+      }
+    }
+    refreshAll();
+    setInterval(refreshAll, 3000);
+
+    // Pausar polling cuando la tab está hidden (ahorra Vercel invocations)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') refreshAll();
+    });
   </script>
 </body>
 </html>
