@@ -239,6 +239,40 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, wiped: counts });
     }
 
+    // ─── GET: cost summary (Claude API gasto + breakdown) ───
+    if (req.method === 'GET' && action === 'cost') {
+      // últimas 24h, agrupado por día / por lead
+      const since24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+      const since7d = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+      const [today, week, byLead] = await Promise.all([
+        supabase.from('messages').select('llm_cost_usd').gte('created_at', since24h).not('llm_cost_usd', 'is', null),
+        supabase.from('messages').select('llm_cost_usd').gte('created_at', since7d).not('llm_cost_usd', 'is', null),
+        supabase.from('messages').select('lead_id, llm_cost_usd').gte('created_at', since24h).not('llm_cost_usd', 'is', null),
+      ]);
+      const sum = (rows) => (rows || []).reduce((acc, r) => acc + parseFloat(r.llm_cost_usd || 0), 0);
+      const cost24h = sum(today.data);
+      const cost7d = sum(week.data);
+      // Top spenders (leads que consumen más)
+      const byLeadMap = {};
+      (byLead.data || []).forEach(r => {
+        byLeadMap[r.lead_id] = (byLeadMap[r.lead_id] || 0) + parseFloat(r.llm_cost_usd || 0);
+      });
+      const topSpenders = Object.entries(byLeadMap).sort((a,b) => b[1] - a[1]).slice(0, 10);
+      // # de mensajes outbound bot (proxy de calls)
+      const { count: callsToday } = await supabase
+        .from('messages').select('*', { count: 'exact', head: true })
+        .eq('sender_type', 'bot').gte('created_at', since24h);
+      return res.status(200).json({
+        ok: true,
+        cost_24h_usd: cost24h,
+        cost_7d_usd: cost7d,
+        calls_today: callsToday,
+        avg_cost_per_call: callsToday ? cost24h / callsToday : 0,
+        top_spenders: topSpenders.map(([lead_id, cost]) => ({ lead_id, cost_usd: cost })),
+        projected_monthly_usd: cost7d * (30/7),
+      });
+    }
+
     return res.status(400).json({ error: 'Unknown action' });
   } catch (e) {
     console.error('[Dashboard]', e.message);

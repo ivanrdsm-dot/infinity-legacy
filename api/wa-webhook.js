@@ -323,13 +323,24 @@ function parseIlRef(text) {
 // GENERATE BOT RESPONSE WITH CLAUDE
 // ─────────────────────────────────────────────────────────
 async function generateBotResponse(lead) {
-  // Pull last 30 messages for context
+  // Anti-loop: si el lead tiene >40 mensajes, cancelar follow-ups pendientes
+  // (probablemente es un loop o test runaway)
+  if ((lead.message_count || 0) > 40) {
+    console.warn(`[WA] Lead ${lead.id} has ${lead.message_count} messages — auto-cancelling follow-ups to prevent runaway`);
+    await getSupabase().from('follow_ups')
+      .update({ status: 'cancelled', cancelled_reason: 'message_count_exceeded', cancelled_at: new Date().toISOString() })
+      .eq('lead_id', lead.id)
+      .eq('status', 'pending');
+  }
+
+  // Pull last 12 messages (down from 30) — costo input lineal con history length
   const { data: history } = await getSupabase()
     .from('messages')
     .select('direction, sender_type, body, created_at')
     .eq('lead_id', lead.id)
-    .order('created_at', { ascending: true })
-    .limit(30);
+    .order('created_at', { ascending: false })
+    .limit(12)
+    .then(r => ({ data: (r.data || []).reverse() }));
 
   // Build context for Claude
   const conversationHistory = (history || []).map(m => ({
@@ -376,20 +387,43 @@ Esto es importante: Iván coordina la agenda manual desde el dashboard. No menci
 
 Usa este contexto SUTILMENTE. NUNCA digas literal "veo que tu lead score es X" ni "vi que viniste del ad image_narrativa5pct".`;
 
-  const fullSystem = getSystemPrompt() + '\n\n' + leadContext;
-
+  // Prompt caching: el system prompt (10KB) cambia muy poco entre calls.
+  // Lo separamos en 2 bloques: SYSTEM_PROMPT estático (cacheable 5 min) +
+  // leadContext dinámico (no cacheable). Resultado: -90% input cost en
+  // calls subsecuentes dentro de la misma ventana de 5 min.
   const response = await getAnthropic().messages.create({
     model: 'claude-sonnet-4-5',
-    max_tokens: 1024,
-    system: fullSystem,
+    max_tokens: 600, // down from 1024 — respuestas WhatsApp deben ser breves
+    system: [
+      {
+        type: 'text',
+        text: getSystemPrompt(),
+        cache_control: { type: 'ephemeral' },
+      },
+      {
+        type: 'text',
+        text: leadContext,
+      },
+    ],
     messages: conversationHistory.length ? conversationHistory : [{ role: 'user', content: '[Lead nuevo, primer mensaje]' }],
   });
 
   const text = response.content?.[0]?.text || '';
   const tokens_in = response.usage?.input_tokens || 0;
   const tokens_out = response.usage?.output_tokens || 0;
-  const cost_usd = (tokens_in * 3 + tokens_out * 15) / 1_000_000; // Sonnet 4.5 pricing
+  const cache_read = response.usage?.cache_read_input_tokens || 0;
+  const cache_create = response.usage?.cache_creation_input_tokens || 0;
+  // Sonnet 4.5 pricing (per 1M tokens):
+  //   uncached input: $3, output: $15
+  //   cache write: $3.75, cache read: $0.30 (10% del input)
+  const cost_usd = (
+    tokens_in * 3 +
+    tokens_out * 15 +
+    cache_create * 3.75 +
+    cache_read * 0.30
+  ) / 1_000_000;
 
+  console.log(`[WA] Claude cost: $${cost_usd.toFixed(5)} | in=${tokens_in} out=${tokens_out} cache_r=${cache_read} cache_w=${cache_create}`);
   return { text, tokens_in, tokens_out, cost_usd, tools: [] };
 }
 

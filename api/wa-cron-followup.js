@@ -56,13 +56,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Pull follow-ups pendientes que ya vencieron
+    // Pull follow-ups pendientes que ya vencieron (limit reducido de 20 a 5 — anti runaway)
     const { data: dueFollowups } = await getSupabase()
       .from('follow_ups')
       .select('*, leads(*)')
       .eq('status', 'pending')
       .lte('scheduled_for', new Date().toISOString())
-      .limit(20);
+      .limit(5);
 
     if (!dueFollowups?.length) {
       return res.status(200).json({ ok: true, processed: 0 });
@@ -115,12 +115,20 @@ export default async function handler(req, res) {
 }
 
 async function generateFollowup(lead, type) {
+  // Anti-runaway: skip si el lead tiene >40 mensajes (probable loop)
+  if ((lead.message_count || 0) > 40) {
+    console.warn(`[Cron] Lead ${lead.id} has ${lead.message_count} messages — skipping follow-up`);
+    return null;
+  }
+
+  // History limit 10 (down from 20) — costo input lineal con length
   const { data: history } = await getSupabase()
     .from('messages')
     .select('direction, body')
     .eq('lead_id', lead.id)
-    .order('created_at', { ascending: true })
-    .limit(20);
+    .order('created_at', { ascending: false })
+    .limit(10)
+    .then(r => ({ data: (r.data || []).reverse() }));
 
   const prompt = `Esta conversación está en stage "${lead.stage}" y el lead no contestó. Genera un follow-up de tipo "${type}" siguiendo las reglas del system prompt. Responde SOLO el texto del mensaje (sin preámbulo ni comillas).`;
   const messages = (history || []).map(m => ({
@@ -129,12 +137,25 @@ async function generateFollowup(lead, type) {
   }));
   messages.push({ role: 'user', content: prompt });
 
+  // Prompt caching: el system prompt es estático → cache 5 min, -90% input cost
   const response = await getAnthropic().messages.create({
     model: 'claude-sonnet-4-5',
-    max_tokens: 300,
-    system: getSystemPrompt(),
+    max_tokens: 200, // down from 300 — follow-ups son cortos
+    system: [{
+      type: 'text',
+      text: getSystemPrompt(),
+      cache_control: { type: 'ephemeral' },
+    }],
     messages,
   });
+  const u = response.usage || {};
+  const cost = (
+    (u.input_tokens || 0) * 3 +
+    (u.output_tokens || 0) * 15 +
+    (u.cache_creation_input_tokens || 0) * 3.75 +
+    (u.cache_read_input_tokens || 0) * 0.30
+  ) / 1_000_000;
+  console.log(`[Cron] Followup cost: $${cost.toFixed(5)} | in=${u.input_tokens||0} cache_r=${u.cache_read_input_tokens||0}`);
   return response.content?.[0]?.text?.trim();
 }
 
