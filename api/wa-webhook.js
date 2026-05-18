@@ -230,9 +230,14 @@ async function processInboundMessage(msg, contact) {
   // 6. Generar respuesta con Claude
   const response = await generateBotResponse(lead);
 
-  // 7. Enviar respuesta
-  if (response.text) {
-    await sendWaMessage(from, response.text);
+  // 7. Enviar respuesta — saltar si Claude regresó meta-text de no-respuesta
+  const txt = (response.text || '').trim();
+  const isMetaNoResponse = !txt ||
+    /^\*?\(?\s*no\s*response/i.test(txt) ||
+    /^\(no\s*response/i.test(txt) ||
+    txt.length < 5;
+  if (txt && !isMetaNoResponse) {
+    await sendWaMessage(from, txt);
     await getSupabase().from('messages').insert({
       lead_id: lead.id,
       direction: 'outbound',
