@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Infinity Legacy — Message Composer</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#0B0F14" />
+  <link rel="manifest" href="/composer-manifest.json" />
+  <style>
+    :root{
+      --gold:#C7A76C; --gold-dark:#A8843D; --gold-light:#DFC99A;
+      --dark:#0B0F14; --dark-mid:#1A2030; --dark-soft:#1F2638;
+      --cream:#F6F1E6; --gray:#6B7280;
+      --green:#25D366; --red:#E54848; --orange:#F59E0B;
+      --r:14px; --r-lg:18px;
+      --ease:.3s cubic-bezier(.25,.46,.45,.94);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;background:linear-gradient(180deg,var(--dark) 0%,#15192a 100%);color:var(--cream);min-height:100vh;padding:20px 16px 100px;overflow-x:hidden}
+    a{color:var(--gold);text-decoration:none}
+    button{cursor:pointer;font-family:inherit;border:none;background:none}
+    textarea,input{font-family:inherit}
+
+    .wrap{max-width:780px;margin:0 auto}
+
+    /* HEADER */
+    header.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:18px;border-bottom:1px solid rgba(199,167,108,.15)}
+    .brand{font-family:Georgia,serif;color:var(--gold);font-size:1.25rem;font-weight:600;display:flex;align-items:center;gap:10px}
+    .brand .logo{width:32px;height:32px;background:linear-gradient(135deg,var(--gold) 0%,var(--gold-dark) 100%);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--dark);font-weight:700;font-size:1rem}
+    header.head .live{display:flex;align-items:center;gap:6px;font-size:.74rem;color:rgba(255,255,255,.55)}
+    header.head .live .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.5s ease-in-out infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+    /* INTRO */
+    .intro{margin-bottom:24px;font-size:.94rem;line-height:1.6;color:rgba(255,255,255,.74)}
+    .intro strong{color:var(--gold)}
+
+    /* INPUT CARD */
+    .card{background:rgba(255,255,255,.04);border:1px solid rgba(199,167,108,.18);border-radius:var(--r-lg);padding:22px;margin-bottom:22px;backdrop-filter:blur(10px)}
+    .card label{display:block;font-size:.74rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.62);margin-bottom:10px}
+    .card label .req{color:var(--gold)}
+    .card label .opt{color:var(--gray);font-weight:400}
+    textarea{width:100%;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px 16px;color:var(--cream);font-size:.96rem;line-height:1.55;resize:vertical;min-height:90px;transition:border-color .2s}
+    textarea:focus{outline:0;border-color:var(--gold)}
+    textarea#context{min-height:60px}
+
+    /* PHONE INPUT */
+    .phone-row{display:flex;gap:10px;margin-top:14px;align-items:flex-end}
+    .phone-row .col{flex:1}
+    input[type="tel"]{width:100%;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 14px;color:var(--cream);font-size:.94rem;font-family:'SF Mono',Menlo,monospace}
+    input[type="tel"]:focus{outline:0;border-color:var(--gold)}
+
+    /* GENERATE BUTTON */
+    .generate{display:block;width:100%;padding:16px 26px;background:linear-gradient(135deg,var(--gold) 0%,var(--gold-dark) 100%);color:var(--dark);font-weight:600;font-size:1rem;border-radius:50px;margin-top:18px;transition:var(--ease);box-shadow:0 6px 24px rgba(199,167,108,.32);letter-spacing:.02em}
+    .generate:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(199,167,108,.4)}
+    .generate:disabled{opacity:.6;cursor:not-allowed;transform:none}
+    .generate .spinner{display:none;width:18px;height:18px;border:2px solid rgba(11,15,20,.3);border-top-color:var(--dark);border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle;margin-right:8px}
+    .generate.loading .spinner{display:inline-block}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* META INFO */
+    .meta-info{display:none;background:rgba(199,167,108,.06);border:1px solid rgba(199,167,108,.16);border-radius:var(--r);padding:12px 16px;margin-bottom:18px;font-size:.84rem;display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+    .meta-info .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(11,15,20,.5);border-radius:30px;font-size:.74rem}
+    .meta-info .pill strong{color:var(--gold);font-weight:600}
+    .meta-info .pill.urgent{background:rgba(229,72,72,.16);color:var(--red);border:1px solid rgba(229,72,72,.3)}
+
+    /* VARIANT CARDS */
+    .variants{display:flex;flex-direction:column;gap:14px;margin-top:6px}
+    .variant{background:rgba(255,255,255,.04);border:1px solid rgba(199,167,108,.18);border-radius:var(--r-lg);padding:18px 20px;transition:var(--ease);position:relative}
+    .variant:hover{border-color:rgba(199,167,108,.4);background:rgba(255,255,255,.06)}
+    .variant .tone{display:inline-flex;align-items:center;gap:6px;font-size:.74rem;font-weight:600;letter-spacing:.04em;color:var(--gold);margin-bottom:10px;padding:4px 12px;background:rgba(199,167,108,.12);border-radius:30px}
+    .variant .body{font-size:.95rem;line-height:1.65;color:var(--cream);white-space:pre-wrap;word-break:break-word;margin-bottom:14px}
+    .variant .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .variant .actions button{flex:1;min-width:120px;padding:10px 14px;border-radius:10px;font-size:.84rem;font-weight:600;transition:var(--ease);letter-spacing:.02em}
+    .btn-copy{background:rgba(255,255,255,.08);color:var(--cream);border:1px solid rgba(255,255,255,.1)}
+    .btn-copy:hover{background:rgba(199,167,108,.16);color:var(--gold);border-color:var(--gold)}
+    .btn-copy.copied{background:var(--gold);color:var(--dark);border-color:var(--gold)}
+    .btn-wa{background:var(--green);color:#fff}
+    .btn-wa:hover{background:#1ebe5a;transform:translateY(-1px)}
+
+    /* EMPTY STATE */
+    .empty{text-align:center;padding:60px 20px;color:var(--gray)}
+    .empty .icon{font-size:3rem;opacity:.4;margin-bottom:14px}
+    .empty .msg{font-size:1rem;color:rgba(255,255,255,.5);margin-bottom:6px}
+    .empty .hint{font-size:.84rem;line-height:1.5;max-width:380px;margin:0 auto}
+
+    /* TOAST */
+    .toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,200%);padding:12px 22px;background:var(--dark-soft);border-left:3px solid var(--gold);border-radius:10px;color:var(--cream);font-size:.88rem;box-shadow:0 12px 32px rgba(0,0,0,.5);transition:transform .3s ease;z-index:1000}
+    .toast.show{transform:translate(-50%,0)}
+    .toast.error{border-left-color:var(--red)}
+
+    /* ERROR */
+    .err{background:rgba(229,72,72,.1);border:1px solid rgba(229,72,72,.3);color:#ff8888;padding:14px 18px;border-radius:var(--r);margin-top:14px;font-size:.88rem;line-height:1.5}
+
+    /* TIPS */
+    .tips{margin-top:32px;font-size:.78rem;color:rgba(255,255,255,.45);line-height:1.65;padding:16px 18px;background:rgba(255,255,255,.02);border-radius:var(--r);border-left:2px solid rgba(199,167,108,.3)}
+    .tips strong{color:var(--gold);font-weight:600}
+
+    @media(max-width:520px){
+      body{padding:14px 12px 80px}
+      header.head{flex-direction:column;align-items:flex-start;gap:8px}
+      .variant .actions{flex-direction:column}
+      .variant .actions button{width:100%}
+    }
+  </style>
+</head>
+<body>
+
+  <div class="wrap">
+    <header class="head">
+      <div class="brand">
+        <span class="logo">⚡</span>
+        <span>Composer</span>
+      </div>
+      <div class="live"><span class="dot"></span> Claude Sonnet 4.5</div>
+    </header>
+
+    <p class="intro">Pega el último mensaje del cliente y te genero <strong>3 borradores de respuesta</strong> (cálido / breve / educativo) con el compliance del modelo. Copia el que prefieras y mándalo desde tu WhatsApp en 5 segundos.</p>
+
+    <div class="card">
+      <label>📥 Último mensaje del cliente <span class="req">*</span></label>
+      <textarea id="customer-message" placeholder="Ej: Hola, vi su anuncio. ¿Qué tan seguro es esto realmente? ¿En cuánto tiempo puedo retirar?" autofocus></textarea>
+
+      <label style="margin-top:18px">🗂️ Contexto previo de la conversación <span class="opt">(opcional)</span></label>
+      <textarea id="context" placeholder="Ej: Ya me dijo que considera aportar $500K, es ingeniero de 45 años de Monterrey."></textarea>
+
+      <div class="phone-row">
+        <div class="col">
+          <label>📱 Tel del cliente <span class="opt">(para enviar)</span></label>
+          <input type="tel" id="phone" placeholder="525555123456" />
+        </div>
+      </div>
+
+      <button id="generate-btn" class="generate" onclick="generate()">
+        <span class="spinner"></span>
+        <span class="lbl">✨ Generar 3 borradores</span>
+      </button>
+    </div>
+
+    <div id="meta-info" class="meta-info"></div>
+    <div id="output" class="empty">
+      <div class="icon">💬</div>
+      <div class="msg">Esperando un mensaje del cliente</div>
+      <div class="hint">Pega el último texto que te escribieron, opcionalmente el contexto previo, y el botón mágico hace el resto.</div>
+    </div>
+
+    <div class="tips">
+      <strong>💡 Tips:</strong> ① Mientras más contexto pegues, mejor el resultado. ② Si el cliente menciona monto, el bot detecta el plan correspondiente automáticamente. ③ Si la respuesta sugerida no te gusta, ajusta el contexto y regenera. ④ Lo que veas aquí cumple compliance CNBV — nunca dirá "rendimiento garantizado" ni palabras prohibidas.
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const TOKEN = new URLSearchParams(location.search).get('t');
+    if (!TOKEN) {
+      document.body.innerHTML = '<div style="padding:60px;text-align:center;color:#fff;font-family:sans-serif">⚠️ Token requerido en URL (?t=...)</div>';
+    }
+
+    function toast(text, isError = false) {
+      const t = document.getElementById('toast');
+      t.textContent = text;
+      t.className = 'toast' + (isError ? ' error' : '') + ' show';
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    async function generate() {
+      const msg = document.getElementById('customer-message').value.trim();
+      const ctx = document.getElementById('context').value.trim();
+      if (!msg) {
+        toast('Pega primero el mensaje del cliente', true);
+        return;
+      }
+
+      const btn = document.getElementById('generate-btn');
+      btn.classList.add('loading');
+      btn.disabled = true;
+      btn.querySelector('.lbl').textContent = 'Pensando…';
+
+      try {
+        const r = await fetch('/api/compose?t=' + encodeURIComponent(TOKEN), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customer_message: msg, context: ctx }),
+        });
+        const data = await r.json();
+
+        if (!r.ok || !data.ok) {
+          throw new Error(data.error || 'Error inesperado');
+        }
+
+        renderResult(data);
+      } catch (e) {
+        document.getElementById('output').innerHTML = `<div class="err">⚠️ ${e.message}</div>`;
+        document.getElementById('meta-info').style.display = 'none';
+      } finally {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        btn.querySelector('.lbl').textContent = '✨ Generar 3 borradores';
+      }
+    }
+
+    function renderResult(data) {
+      // Meta info
+      const meta = document.getElementById('meta-info');
+      const pills = [];
+      if (data.stage_detected) pills.push(`<span class="pill">📍 Stage <strong>${data.stage_detected}</strong></span>`);
+      if (data.intent) pills.push(`<span class="pill">🎯 ${data.intent}</span>`);
+      if (data.ticket_signal && data.ticket_signal !== 'UNKNOWN') pills.push(`<span class="pill">💰 Plan <strong>${data.ticket_signal}</strong></span>`);
+      if (data.escalate_to_ivan) pills.push(`<span class="pill urgent">🚨 Escalar a ti: ${data.escalate_reason || 'sin motivo'}</span>`);
+      if (data.cost_usd) pills.push(`<span class="pill">⏱ ${data.latency_ms}ms · $${data.cost_usd}</span>`);
+      meta.innerHTML = pills.join('');
+      meta.style.display = 'flex';
+
+      // Variants
+      const phone = document.getElementById('phone').value.trim().replace(/\D/g, '');
+      const variants = data.variants || [];
+      const variantsHtml = variants.map((v, idx) => {
+        const encoded = encodeURIComponent(v.text);
+        const waLink = phone ? `https://wa.me/${phone}?text=${encoded}` : '#';
+        const waDisabled = !phone ? 'data-no-phone' : '';
+        return `
+          <div class="variant">
+            <span class="tone">${v.tone || 'Variante ' + (idx + 1)}</span>
+            <div class="body">${escapeHtml(v.text)}</div>
+            <div class="actions">
+              <button class="btn-copy" onclick="copyText(this, ${idx})">📋 Copiar</button>
+              <a class="btn-wa ${waDisabled ? 'disabled' : ''}" href="${waLink}" target="_blank" rel="noopener" onclick="${!phone ? 'event.preventDefault(); toast(\\'Pon el tel del cliente arriba para enviar\\', true)' : ''}">💬 Enviar por WhatsApp</a>
+            </div>
+          </div>
+        `;
+      }).join('');
+      document.getElementById('output').innerHTML = '<div class="variants">' + variantsHtml + '</div>';
+
+      // Store for copy buttons
+      window._variants = variants;
+    }
+
+    async function copyText(btn, idx) {
+      const text = window._variants[idx]?.text || '';
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.classList.add('copied');
+        btn.textContent = '✓ Copiado';
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.textContent = '📋 Copiar';
+        }, 1500);
+        toast('Copiado al portapapeles');
+      } catch (e) {
+        toast('No se pudo copiar', true);
+      }
+    }
+
+    function escapeHtml(s) {
+      return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // Cmd/Ctrl + Enter para generar
+    document.getElementById('customer-message').addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        generate();
+      }
+    });
+  </script>
+</body>
+</html>
