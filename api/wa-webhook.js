@@ -378,11 +378,17 @@ async function sendWaMessage(to, body) {
       text: { body, preview_url: true },
     }),
   });
+  // Lee body UNA sola vez — fix del "Body has already been read"
+  const text = await resp.text();
   if (!resp.ok) {
-    const err = await resp.text();
-    console.error('[WA send] Failed:', resp.status, err);
+    console.error('[WA send] Failed:', resp.status, text);
+    return { error: true, status: resp.status, body: text };
   }
-  return resp.json();
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    return { raw: text };
+  }
 }
 
 // ─────────────────────────────────────────────────────────
