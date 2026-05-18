@@ -21,8 +21,26 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import ws from 'ws';
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+// Lazy-init para evitar fallos en cold start (Node 20 + WS)
+let _supabase = null;
+function getSupabase() {
+  if (_supabase) return _supabase;
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Supabase env vars missing');
+  }
+  _supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { persistSession: false }, realtime: { transport: ws } }
+  );
+  return _supabase;
+}
+// alias para minimizar cambios en el resto del archivo
+const supabase = new Proxy({}, {
+  get: (_, prop) => getSupabase()[prop],
+});
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -47,11 +65,39 @@ export default async function handler(req, res) {
   try {
     // ─── GET: list de conversaciones ───
     if (req.method === 'GET' && action === 'list') {
-      const { data: leads } = await supabase
+      // Intenta la vista lead_dashboard primero, fallback a tabla leads directo
+      let r = await supabase
         .from('lead_dashboard')
         .select('*')
-        .limit(100);
-      return res.status(200).json({ ok: true, leads: leads || [] });
+        .order('last_message_at', { ascending: false, nullsFirst: false })
+        .limit(200);
+      if (r.error) {
+        // Vista no existe → query a leads + último mensaje
+        const leadsRes = await supabase
+          .from('leads')
+          .select('id, wa_phone, wa_name, stage, source, campaign, lead_score, matched_plan, bot_paused, last_message_at, message_count, created_at, priority')
+          .order('last_message_at', { ascending: false, nullsFirst: false })
+          .limit(200);
+        // Pull last message body per lead
+        const ids = (leadsRes.data || []).map(l => l.id);
+        const { data: lastMsgs } = ids.length
+          ? await supabase.from('messages').select('lead_id, body, direction, created_at').in('lead_id', ids).order('created_at', { ascending: false })
+          : { data: [] };
+        const seen = new Set();
+        const lastByLead = {};
+        for (const m of (lastMsgs || [])) {
+          if (seen.has(m.lead_id)) continue;
+          seen.add(m.lead_id);
+          lastByLead[m.lead_id] = m;
+        }
+        const merged = (leadsRes.data || []).map(l => ({
+          ...l,
+          last_message_body: lastByLead[l.id]?.body || null,
+          last_message_direction: lastByLead[l.id]?.direction || null,
+        }));
+        return res.status(200).json({ ok: true, leads: merged, source: 'fallback' });
+      }
+      return res.status(200).json({ ok: true, leads: r.data || [], source: 'view' });
     }
 
     // ─── GET: historial de una conversación ───
