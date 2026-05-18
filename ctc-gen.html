@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Infinity Legacy — Click-to-Chat Generator</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <style>
+    :root{
+      --gold:#C7A76C; --gold-dark:#A8843D; --gold-light:#DFC99A;
+      --dark:#0B0F14; --dark-mid:#1A2030; --dark-soft:#1F2638;
+      --gray:#3A3F46; --gray-light:#6B7280;
+      --cream:#F6F1E6; --border:#E7DDCB;
+      --green:#25D366; --red:#E54848;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;background:var(--dark);color:var(--cream);min-height:100vh;padding:24px}
+    a{color:var(--gold);text-decoration:none}
+
+    .container{max-width:920px;margin:0 auto}
+    h1{font-family:Georgia,serif;color:var(--gold);font-size:1.8rem;margin-bottom:6px}
+    .sub{color:rgba(255,255,255,.55);font-size:.92rem;margin-bottom:28px}
+
+    .grid{display:grid;grid-template-columns:1fr 320px;gap:24px}
+    @media(max-width:720px){.grid{grid-template-columns:1fr}}
+
+    .card{background:var(--dark-mid);border:1px solid rgba(199,167,108,.12);border-radius:14px;padding:22px}
+    .card h2{color:var(--gold);font-size:1rem;font-weight:600;margin-bottom:16px;letter-spacing:.04em;text-transform:uppercase}
+
+    label{display:block;color:rgba(255,255,255,.62);font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;margin-top:14px}
+    label:first-of-type{margin-top:0}
+    input,select,textarea{width:100%;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;color:var(--cream);font-family:inherit;font-size:.94rem}
+    textarea{min-height:90px;resize:vertical;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+    input:focus,select:focus,textarea:focus{outline:0;border-color:var(--gold);background:rgba(199,167,108,.05)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media(max-width:560px){.row{grid-template-columns:1fr}}
+
+    .preset{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .preset button{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.74);padding:6px 12px;border-radius:50px;font-size:.74rem;cursor:pointer;transition:all .15s}
+    .preset button:hover{border-color:var(--gold);color:var(--gold)}
+
+    .output{background:rgba(199,167,108,.06);border:1px solid rgba(199,167,108,.24);border-radius:10px;padding:14px;margin-top:18px}
+    .output .label{color:var(--gold);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+    .output .url{font-family:'SF Mono',Menlo,monospace;font-size:.84rem;word-break:break-all;color:#fff;background:rgba(0,0,0,.3);padding:10px;border-radius:6px;line-height:1.4}
+
+    .actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+    .btn{padding:8px 16px;border-radius:8px;border:0;font-weight:600;cursor:pointer;font-size:.86rem;transition:all .15s}
+    .btn.primary{background:var(--gold);color:var(--dark)}
+    .btn.primary:hover{background:var(--gold-light)}
+    .btn.ghost{background:transparent;color:var(--gold);border:1px solid var(--gold)}
+    .btn.ghost:hover{background:rgba(199,167,108,.1)}
+    .btn.wa{background:var(--green);color:#fff}
+
+    .qr{text-align:center;background:#fff;border-radius:14px;padding:18px}
+    .qr img{width:100%;max-width:260px;height:auto;display:block;margin:0 auto}
+    .qr-hint{color:rgba(255,255,255,.5);font-size:.78rem;text-align:center;margin-top:8px}
+
+    .preview{background:rgba(0,0,0,.4);border-radius:10px;padding:14px;margin-top:14px;font-size:.86rem;line-height:1.5}
+    .preview .ref{color:var(--gold-light);opacity:.55}
+    .preview .real{color:#fff}
+
+    .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:10px 24px;border-radius:8px;font-size:.9rem;opacity:0;transition:opacity .25s;z-index:100;pointer-events:none}
+    .toast.show{opacity:1}
+
+    .meta-info{background:rgba(255,255,255,.03);border-radius:8px;padding:10px 12px;margin-top:10px;font-size:.78rem;color:rgba(255,255,255,.62);line-height:1.5}
+    .meta-info code{background:rgba(199,167,108,.15);color:var(--gold);padding:1px 6px;border-radius:4px;font-size:.92em}
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Click-to-Chat Generator</h1>
+  <p class="sub">Genera URLs <code style="color:var(--gold)">wa.me</code> con tracking <code style="color:var(--gold)">[il-ref:…]</code> para que el bot sepa de qué anuncio viene cada lead.</p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Configura el link</h2>
+
+      <label>Número destino (WhatsApp Business)</label>
+      <input id="phone" value="5566253065" inputmode="numeric" />
+      <div class="meta-info">Sin <code>+</code> ni espacios. México: <code>5566253065</code> (sin el "1"). Mañana cuando se desbloquee el real, este queda fijo.</div>
+
+      <div class="row">
+        <div>
+          <label>Fuente (src)</label>
+          <select id="src">
+            <option value="meta">meta (Facebook/IG)</option>
+            <option value="google">google</option>
+            <option value="youtube">youtube</option>
+            <option value="tiktok">tiktok</option>
+            <option value="organic">organic</option>
+            <option value="referral">referral</option>
+          </select>
+        </div>
+        <div>
+          <label>Etapa funnel</label>
+          <select id="funnel">
+            <option value="tofu">TOFU (descubrimiento)</option>
+            <option value="mofu">MOFU (consideración)</option>
+            <option value="bofu">BOFU (cierre)</option>
+            <option value="rt">RT (retargeting)</option>
+          </select>
+        </div>
+      </div>
+
+      <label>Campaña (cmp) — código corto, sin espacios</label>
+      <input id="cmp" placeholder="ej. narrativa-5pct-may" />
+      <div class="preset">
+        <button data-cmp="narrativa-5pct">narrativa-5pct</button>
+        <button data-cmp="testimonio-cliente">testimonio-cliente</button>
+        <button data-cmp="planes-portafolio">planes-portafolio</button>
+        <button data-cmp="calc-conservador">calc-conservador</button>
+      </div>
+
+      <label>Anuncio (ad) — código del creativo, sin espacios</label>
+      <input id="ad" placeholder="ej. video-15s-v1" />
+
+      <label>Mensaje inicial (lo que el usuario ve pre-llenado en WhatsApp)</label>
+      <textarea id="msg">Hola, me interesa conocer más sobre Infinity Legacy y el Programa de Acceso. ¿Me pueden contar?</textarea>
+      <div class="preset">
+        <button data-msg="Hola, me interesa el Programa de Acceso de Infinity Legacy. ¿Me pueden contar?">Genérico interés</button>
+        <button data-msg="Vi su anuncio. Quiero entender cómo funciona el portafolio diversificado.">Vi anuncio</button>
+        <button data-msg="¿Cuáles son los planes y montos mínimos del Programa de Acceso?">Pregunta planes</button>
+        <button data-msg="Quiero agendar una sesión de 60 min con su equipo.">Pedir sesión</button>
+      </div>
+
+      <div class="output">
+        <div class="label">📱 Tu URL Click-to-Chat</div>
+        <div class="url" id="urlOut">—</div>
+        <div class="actions">
+          <button class="btn primary" id="copyBtn">📋 Copiar URL</button>
+          <button class="btn wa" id="testBtn">🚀 Abrir en WhatsApp (test)</button>
+          <button class="btn ghost" id="resetBtn">↺ Reset</button>
+        </div>
+      </div>
+
+      <div class="output" style="margin-top:14px;border-color:rgba(255,255,255,.06);background:rgba(255,255,255,.02)">
+        <div class="label" style="color:rgba(255,255,255,.55)">💬 Lo que el cliente verá (preview)</div>
+        <div class="preview">
+          <span class="ref" id="prevRef">[il-ref: src=meta cmp=… ad=… ]</span>
+          <span class="real" id="prevMsg">Hola, me interesa…</span>
+        </div>
+        <div class="meta-info">El <code>[il-ref:…]</code> es invisible para el bot (lo extrae y guarda en el lead). El cliente lo ve, pero la mayoría lo ignora — es texto corto al inicio.</div>
+      </div>
+
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>📷 QR Code</h2>
+        <div class="qr" id="qrBox"><img id="qrImg" alt="QR" /></div>
+        <div class="qr-hint">Úsalo en flyers, pantallas, eventos. Mismo tracking que la URL.</div>
+        <div class="actions" style="margin-top:14px">
+          <button class="btn ghost" id="qrDl" style="width:100%">⬇️ Descargar PNG</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:18px">
+        <h2>📝 Convención</h2>
+        <div style="font-size:.78rem;color:rgba(255,255,255,.62);line-height:1.7">
+          <strong style="color:var(--gold-light)">src</strong> = de dónde viene<br>
+          <strong style="color:var(--gold-light)">funnel</strong> = etapa (tofu/mofu/bofu/rt)<br>
+          <strong style="color:var(--gold-light)">cmp</strong> = campaña (kebab-case)<br>
+          <strong style="color:var(--gold-light)">ad</strong> = creativo específico<br><br>
+          Ej: <code>narrativa-5pct/video-15s-v1</code> → <code>narrativa-5pct/img-narrativa5pct</code> para A/B testing.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">URL copiada ✓</div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const phone = $('phone'), src = $('src'), funnel = $('funnel'), cmp = $('cmp'), ad = $('ad'), msg = $('msg');
+
+function build() {
+  const ilref = `[il-ref: src=${src.value} funnel=${funnel.value} cmp=${cmp.value || 'unset'} ad=${ad.value || 'unset'}]`;
+  const fullText = `${ilref} ${msg.value}`.trim();
+  const url = `https://wa.me/${phone.value.replace(/\D/g,'')}?text=${encodeURIComponent(fullText)}`;
+  $('urlOut').textContent = url;
+  $('prevRef').textContent = ilref + ' ';
+  $('prevMsg').textContent = msg.value;
+  // QR via api.qrserver.com (free, no auth)
+  $('qrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&data=${encodeURIComponent(url)}`;
+  return url;
+}
+
+['input','change'].forEach(ev => {
+  [phone, src, funnel, cmp, ad, msg].forEach(el => el.addEventListener(ev, build));
+});
+
+// Preset chips
+document.querySelectorAll('.preset button').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    if (e.currentTarget.dataset.cmp) { cmp.value = e.currentTarget.dataset.cmp; }
+    if (e.currentTarget.dataset.msg) { msg.value = e.currentTarget.dataset.msg; }
+    build();
+  });
+});
+
+$('copyBtn').addEventListener('click', async () => {
+  const url = build();
+  try {
+    await navigator.clipboard.writeText(url);
+    const t = $('toast'); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 1500);
+  } catch (e) { alert('No se pudo copiar. Copia manual:\n' + url); }
+});
+
+$('testBtn').addEventListener('click', () => { window.open(build(), '_blank'); });
+
+$('resetBtn').addEventListener('click', () => {
+  src.value = 'meta'; funnel.value = 'tofu'; cmp.value = ''; ad.value = '';
+  msg.value = 'Hola, me interesa conocer más sobre Infinity Legacy y el Programa de Acceso. ¿Me pueden contar?';
+  build();
+});
+
+$('qrDl').addEventListener('click', () => {
+  // Forzar descarga vía fetch + blob
+  fetch($('qrImg').src).then(r => r.blob()).then(blob => {
+    const u = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = u; a.download = `qr-${cmp.value || 'untagged'}-${ad.value || 'na'}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(u);
+  });
+});
+
+build();
+</script>
+</body>
+</html>

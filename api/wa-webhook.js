@@ -196,11 +196,14 @@ async function processInboundMessage(msg, contact) {
   if (isNew || lead.message_count === 0) {
     const refData = parseIlRef(text);
     if (refData) {
-      await getSupabase().from('leads').update({
+      const update = {
         source: refData.src || 'meta',
         campaign: refData.cmp,
         ad_id: refData.ad,
-      }).eq('id', lead.id);
+      };
+      // funnel stage si viene
+      if (refData.funnel) update.funnel_stage = refData.funnel;
+      await getSupabase().from('leads').update(update).eq('id', lead.id);
     }
   }
 
