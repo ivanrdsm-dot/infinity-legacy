@@ -260,7 +260,7 @@ function parseIlRef(text) {
 // ─────────────────────────────────────────────────────────
 async function generateBotResponse(lead) {
   // Pull last 30 messages for context
-  const { data: history } = await supabase
+  const { data: history } = await getSupabase()
     .from('messages')
     .select('direction, sender_type, body, created_at')
     .eq('lead_id', lead.id)
