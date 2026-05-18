@@ -15,13 +15,34 @@ import Anthropic from '@anthropic-ai/sdk';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const SYSTEM_PROMPT = fs.readFileSync(
-  path.join(process.cwd(), 'api/wa-bot/system-prompt.md'),
-  'utf-8'
-);
+// Lazy-init para serverless
+let _SYSTEM_PROMPT = null;
+function getSystemPrompt() {
+  if (_SYSTEM_PROMPT) return _SYSTEM_PROMPT;
+  try {
+    _SYSTEM_PROMPT = fs.readFileSync(path.join(process.cwd(), 'api/wa-bot/system-prompt.md'), 'utf-8');
+  } catch (e) {
+    console.error('[Cron] fs.readFileSync failed:', e.message);
+    _SYSTEM_PROMPT = 'Eres el Asistente Infinity Legacy. Genera follow-ups breves y empáticos.';
+  }
+  return _SYSTEM_PROMPT;
+}
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+let _supabase = null;
+function getSupabase() {
+  if (_supabase) return _supabase;
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error('Supabase env missing');
+  _supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return _supabase;
+}
+
+let _anthropic = null;
+function getAnthropic() {
+  if (_anthropic) return _anthropic;
+  if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY missing');
+  _anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return _anthropic;
+}
 
 export default async function handler(req, res) {
   // Vercel cron auth header
@@ -32,7 +53,7 @@ export default async function handler(req, res) {
 
   try {
     // Pull follow-ups pendientes que ya vencieron
-    const { data: dueFollowups } = await supabase
+    const { data: dueFollowups } = await getSupabase()
       .from('follow_ups')
       .select('*, leads(*)')
       .eq('status', 'pending')
@@ -47,7 +68,7 @@ export default async function handler(req, res) {
     for (const fu of dueFollowups) {
       // Si el lead está pausado (humano lo tomó), saltarlo
       if (fu.leads?.bot_paused) {
-        await supabase.from('follow_ups')
+        await getSupabase().from('follow_ups')
           .update({ status: 'cancelled', cancelled_reason: 'bot_paused' })
           .eq('id', fu.id);
         continue;
@@ -55,7 +76,7 @@ export default async function handler(req, res) {
 
       // Si el lead respondió DESPUÉS de programar este follow-up, saltarlo
       if (fu.leads?.last_message_at && new Date(fu.leads.last_message_at) > new Date(fu.created_at)) {
-        await supabase.from('follow_ups')
+        await getSupabase().from('follow_ups')
           .update({ status: 'cancelled', cancelled_reason: 'lead_responded' })
           .eq('id', fu.id);
         continue;
@@ -65,17 +86,17 @@ export default async function handler(req, res) {
       const followupMsg = await generateFollowup(fu.leads, fu.followup_type);
       if (followupMsg) {
         await sendWaMessage(fu.leads.wa_phone, followupMsg);
-        await supabase.from('messages').insert({
+        await getSupabase().from('messages').insert({
           lead_id: fu.lead_id,
           direction: 'outbound',
           sender_type: 'bot',
           body: followupMsg,
           llm_model: 'claude-sonnet-4-5',
         });
-        await supabase.from('follow_ups')
+        await getSupabase().from('follow_ups')
           .update({ status: 'sent', sent_at: new Date().toISOString() })
           .eq('id', fu.id);
-        await supabase.from('leads')
+        await getSupabase().from('leads')
           .update({ last_outbound_at: new Date().toISOString() })
           .eq('id', fu.lead_id);
         processed++;
@@ -90,7 +111,7 @@ export default async function handler(req, res) {
 }
 
 async function generateFollowup(lead, type) {
-  const { data: history } = await supabase
+  const { data: history } = await getSupabase()
     .from('messages')
     .select('direction, body')
     .eq('lead_id', lead.id)
@@ -104,10 +125,10 @@ async function generateFollowup(lead, type) {
   }));
   messages.push({ role: 'user', content: prompt });
 
-  const response = await anthropic.messages.create({
+  const response = await getAnthropic().messages.create({
     model: 'claude-sonnet-4-5',
     max_tokens: 300,
-    system: SYSTEM_PROMPT,
+    system: getSystemPrompt(),
     messages,
   });
   return response.content?.[0]?.text?.trim();

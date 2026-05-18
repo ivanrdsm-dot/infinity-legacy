@@ -32,17 +32,45 @@ import Anthropic from '@anthropic-ai/sdk';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const SYSTEM_PROMPT = fs.readFileSync(
-  path.join(process.cwd(), 'api/wa-bot/system-prompt.md'),
-  'utf-8'
-);
+// Lazy-init para evitar fallos en module load si env vars no están listas
+// o si Vercel no bundleó el .md
+let _SYSTEM_PROMPT = null;
+function getSystemPrompt() {
+  if (_SYSTEM_PROMPT) return _SYSTEM_PROMPT;
+  try {
+    _SYSTEM_PROMPT = fs.readFileSync(
+      path.join(process.cwd(), 'api/wa-bot/system-prompt.md'),
+      'utf-8'
+    );
+  } catch (e) {
+    console.error('[WA] fs.readFileSync failed:', e.message);
+    _SYSTEM_PROMPT = 'Eres el Asistente Infinity Legacy. Plan BRONZE $50K-$200K (1.5%/mes), SILVER $200K-$400K (2%/mes), GOLD $400K-$700K (2.5%/mes), BLACK $700K-$1M (3%/mes), BLACK MORE+ $1M+ (3.5%/mes). Sé cordial, breve, compliance CNBV (nunca digas "invertir", "rendimiento garantizado"). Usa "mandante", "aportación", "contrato de mandato", "resultados operativos variables".';
+  }
+  return _SYSTEM_PROMPT;
+}
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+let _supabase = null;
+function getSupabase() {
+  if (_supabase) return _supabase;
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Supabase env vars missing');
+  }
+  _supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+  return _supabase;
+}
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+let _anthropic = null;
+function getAnthropic() {
+  if (_anthropic) return _anthropic;
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error('ANTHROPIC_API_KEY missing');
+  }
+  _anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return _anthropic;
+}
 
 // ─────────────────────────────────────────────────────────
 // MAIN HANDLER
@@ -118,7 +146,7 @@ async function processInboundMessage(msg, contact) {
   if (isNew || lead.message_count === 0) {
     const refData = parseIlRef(text);
     if (refData) {
-      await supabase.from('leads').update({
+      await getSupabase().from('leads').update({
         source: refData.src || 'meta',
         campaign: refData.cmp,
         ad_id: refData.ad,
@@ -127,7 +155,7 @@ async function processInboundMessage(msg, contact) {
   }
 
   // 3. Save inbound message
-  await supabase.from('messages').insert({
+  await getSupabase().from('messages').insert({
     lead_id: lead.id,
     direction: 'inbound',
     sender_type: 'lead',
@@ -138,7 +166,7 @@ async function processInboundMessage(msg, contact) {
   });
 
   // 4. Cancelar follow-ups pendientes (el lead ya respondió)
-  await supabase.from('follow_ups')
+  await getSupabase().from('follow_ups')
     .update({ status: 'cancelled', cancelled_at: new Date().toISOString(), cancelled_reason: 'lead_responded' })
     .eq('lead_id', lead.id)
     .eq('status', 'pending');
@@ -155,7 +183,7 @@ async function processInboundMessage(msg, contact) {
   // 7. Enviar respuesta
   if (response.text) {
     await sendWaMessage(from, response.text);
-    await supabase.from('messages').insert({
+    await getSupabase().from('messages').insert({
       lead_id: lead.id,
       direction: 'outbound',
       sender_type: 'bot',
@@ -178,7 +206,7 @@ async function processInboundMessage(msg, contact) {
   await scheduleFollowUps(lead.id);
 
   // 10. Actualizar lead state
-  await supabase.from('leads').update({
+  await getSupabase().from('leads').update({
     last_message_at: new Date().toISOString(),
     last_outbound_at: new Date().toISOString(),
     message_count: (lead.message_count || 0) + 1,
@@ -189,7 +217,7 @@ async function processInboundMessage(msg, contact) {
 // UPSERT LEAD
 // ─────────────────────────────────────────────────────────
 async function upsertLead(from, contact, firstMessage) {
-  const { data: existing } = await supabase
+  const { data: existing } = await getSupabase()
     .from('leads')
     .select('*')
     .eq('wa_phone', from)
@@ -197,7 +225,7 @@ async function upsertLead(from, contact, firstMessage) {
 
   if (existing) return { lead: existing, isNew: false };
 
-  const { data: newLead } = await supabase.from('leads').insert({
+  const { data: newLead } = await getSupabase().from('leads').insert({
     wa_phone: from,
     wa_name: contact?.profile?.name || null,
     stage: 'INITIAL',
@@ -259,9 +287,9 @@ async function generateBotResponse(lead) {
 
 Usa este contexto SUTILMENTE. NUNCA digas literal "veo que tu lead score es X" ni "vi que viniste del ad image_narrativa5pct".`;
 
-  const fullSystem = SYSTEM_PROMPT + '\n\n' + leadContext;
+  const fullSystem = getSystemPrompt() + '\n\n' + leadContext;
 
-  const response = await anthropic.messages.create({
+  const response = await getAnthropic().messages.create({
     model: 'claude-sonnet-4-5',
     max_tokens: 1024,
     system: fullSystem,
@@ -306,7 +334,7 @@ async function sendWaMessage(to, body) {
 // ─────────────────────────────────────────────────────────
 async function handleBotTool(tool, lead) {
   if (tool.name === 'escalate_to_ivan') {
-    await supabase.from('escalations').insert({
+    await getSupabase().from('escalations').insert({
       lead_id: lead.id,
       reason: tool.args.reason,
       urgency: tool.args.urgency || 'normal',
@@ -316,9 +344,9 @@ async function handleBotTool(tool, lead) {
     await sendWaMessage(process.env.IVAN_NOTIFY_NUMBER,
       `🚨 ESCALACIÓN ${tool.args.urgency?.toUpperCase() || 'NORMAL'}\nLead: ${lead.wa_name || lead.wa_phone}\nMotivo: ${tool.args.reason}\nContexto: ${tool.args.context}\n\nDashboard: https://www.infinitylegacy.io/wa-dashboard?t=...`);
   } else if (tool.name === 'set_stage') {
-    await supabase.from('leads').update({ stage: tool.args.stage }).eq('id', lead.id);
+    await getSupabase().from('leads').update({ stage: tool.args.stage }).eq('id', lead.id);
   } else if (tool.name === 'set_matched_plan') {
-    await supabase.from('leads').update({ matched_plan: tool.args.plan }).eq('id', lead.id);
+    await getSupabase().from('leads').update({ matched_plan: tool.args.plan }).eq('id', lead.id);
   }
 }
 
@@ -342,7 +370,7 @@ async function handleIvanCommand(text) {
   const arg = parts.slice(2).join(' ');
 
   async function findLead(p) {
-    const { data } = await supabase.from('leads').select('id, wa_phone, wa_name').eq('wa_phone', p).maybeSingle();
+    const { data } = await getSupabase().from('leads').select('id, wa_phone, wa_name').eq('wa_phone', p).maybeSingle();
     return data;
   }
 
@@ -360,36 +388,36 @@ async function handleIvanCommand(text) {
   switch (cmd) {
     case '/yo':
       if (!lead) return reply('Usa: /yo [phone]');
-      await supabase.from('leads').update({
+      await getSupabase().from('leads').update({
         bot_paused: true, paused_at: new Date().toISOString(), paused_by: 'ivan'
       }).eq('id', lead.id);
-      await supabase.from('follow_ups')
+      await getSupabase().from('follow_ups')
         .update({ status: 'cancelled', cancelled_reason: 'ivan_takeover', cancelled_at: new Date().toISOString() })
         .eq('lead_id', lead.id).eq('status', 'pending');
       return reply(`✅ Bot pausado para ${lead.wa_name || phone}. A partir de aquí escribes tú.`);
 
     case '/bot':
       if (!lead) return reply('Usa: /bot [phone]');
-      await supabase.from('leads').update({ bot_paused: false, paused_at: null }).eq('id', lead.id);
+      await getSupabase().from('leads').update({ bot_paused: false, paused_at: null }).eq('id', lead.id);
       return reply(`✅ Bot reactivado para ${lead.wa_name || phone}.`);
 
     case '/escalar':
       if (!lead) return reply('Usa: /escalar [phone]');
-      await supabase.from('leads').update({ priority: 'urgent' }).eq('id', lead.id);
+      await getSupabase().from('leads').update({ priority: 'urgent' }).eq('id', lead.id);
       return reply(`🚨 Lead ${lead.wa_name || phone} marcado como URGENT.`);
 
     case '/cerrar':
       if (!lead || !arg) return reply('Usa: /cerrar [phone] won|lost');
       const outcome = arg.toLowerCase() === 'won' ? 'WON' : 'LOST';
-      await supabase.from('leads').update({ stage: outcome }).eq('id', lead.id);
-      await supabase.from('follow_ups')
+      await getSupabase().from('leads').update({ stage: outcome }).eq('id', lead.id);
+      await getSupabase().from('follow_ups')
         .update({ status: 'cancelled', cancelled_reason: 'lead_' + outcome.toLowerCase() })
         .eq('lead_id', lead.id).eq('status', 'pending');
       return reply(`✅ Lead marcado como ${outcome}.`);
 
     case '/nota':
       if (!lead || !arg) return reply('Usa: /nota [phone] [texto de la nota]');
-      await supabase.from('notes').insert({ lead_id: lead.id, author: 'ivan', body: arg, tag: 'manual' });
+      await getSupabase().from('notes').insert({ lead_id: lead.id, author: 'ivan', body: arg, tag: 'manual' });
       return reply(`✅ Nota guardada para ${lead.wa_name || phone}.`);
 
     case '/help':
@@ -424,5 +452,5 @@ async function scheduleFollowUps(leadId) {
     followup_type: s.type,
     status: 'pending',
   }));
-  await supabase.from('follow_ups').insert(inserts);
+  await getSupabase().from('follow_ups').insert(inserts);
 }
