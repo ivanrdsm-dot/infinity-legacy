@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Infinity Legacy — Pre-check de Anuncios</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <style>
+    :root{
+      --gold:#C7A76C; --gold-dark:#A8843D; --gold-light:#DFC99A;
+      --dark:#0B0F14; --dark-mid:#1A2030; --dark-soft:#1F2638;
+      --cream:#F6F1E6;
+      --green:#25D366; --red:#E54848; --orange:#F59E0B; --blue:#3B82F6;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;background:var(--dark);color:var(--cream);min-height:100vh;padding:24px}
+    .container{max-width:1100px;margin:0 auto}
+    h1{font-family:Georgia,serif;color:var(--gold);font-size:1.7rem;margin-bottom:6px}
+    .sub{color:rgba(255,255,255,.55);font-size:.92rem;margin-bottom:24px}
+    a{color:var(--gold)}
+
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+    @media(max-width:720px){.grid{grid-template-columns:1fr}}
+
+    .card{background:var(--dark-mid);border:1px solid rgba(199,167,108,.12);border-radius:14px;padding:22px}
+    .card h2{color:var(--gold);font-size:.95rem;font-weight:600;margin-bottom:16px;letter-spacing:.05em;text-transform:uppercase}
+
+    label{display:block;color:rgba(255,255,255,.62);font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;margin:14px 0 6px}
+    label:first-child{margin-top:0}
+    input,textarea,select{width:100%;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;color:var(--cream);font-family:inherit;font-size:.92rem}
+    textarea{min-height:80px;resize:vertical}
+    input:focus,textarea:focus,select:focus{outline:0;border-color:var(--gold)}
+
+    .btn{padding:11px 22px;border-radius:10px;border:0;font-weight:700;cursor:pointer;font-size:.94rem;letter-spacing:.02em}
+    .btn.primary{background:var(--gold);color:var(--dark);width:100%;margin-top:18px}
+    .btn.primary:hover{background:var(--gold-light)}
+    .btn.primary:disabled{opacity:.5;cursor:wait}
+
+    .score-box{display:flex;align-items:center;gap:18px;padding:18px;border-radius:12px;margin-bottom:14px}
+    .score-box.pass{background:rgba(37,211,102,.1);border:1px solid var(--green)}
+    .score-box.review{background:rgba(245,158,11,.1);border:1px solid var(--orange)}
+    .score-box.reject{background:rgba(229,72,72,.12);border:1px solid var(--red)}
+    .score-num{font-size:2.4rem;font-weight:700;line-height:1}
+    .score-info{flex:1}
+    .score-verdict{font-size:1.1rem;font-weight:600;margin-bottom:4px}
+    .score-reason{font-size:.86rem;color:rgba(255,255,255,.7);line-height:1.4}
+
+    .flag-list{margin-top:10px}
+    .flag{padding:10px 12px;border-radius:8px;margin-bottom:8px;font-size:.86rem;line-height:1.45}
+    .flag.tier-1{background:rgba(229,72,72,.12);border-left:3px solid var(--red)}
+    .flag.tier-2{background:rgba(245,158,11,.1);border-left:3px solid var(--orange)}
+    .flag.tier-3{background:rgba(59,130,246,.1);border-left:3px solid var(--blue)}
+    .flag .loc{font-weight:600;text-transform:uppercase;font-size:.7rem;color:var(--gold)}
+    .flag .ev{font-family:'SF Mono',Menlo,monospace;background:rgba(0,0,0,.3);padding:1px 6px;border-radius:4px;font-size:.82em}
+
+    .rewrite{background:rgba(199,167,108,.06);border:1px solid rgba(199,167,108,.24);padding:14px;border-radius:10px;margin-top:12px}
+    .rewrite .field{margin-bottom:10px}
+    .rewrite .field-label{color:var(--gold);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
+    .rewrite .field-val{font-size:.92rem;line-height:1.45;color:var(--cream)}
+
+    .keep-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+    .keep-item{font-size:.84rem;color:rgba(255,255,255,.74);padding:5px 10px;background:rgba(37,211,102,.08);border-left:2px solid var(--green);border-radius:4px}
+
+    .empty{text-align:center;color:rgba(255,255,255,.4);padding:32px;font-size:.9rem}
+    .loading{text-align:center;color:var(--gold);padding:24px;font-size:.92rem}
+
+    .meta-info{margin-top:14px;font-size:.78rem;color:rgba(255,255,255,.5);line-height:1.5}
+    .meta-info code{background:rgba(199,167,108,.14);color:var(--gold);padding:1px 5px;border-radius:3px}
+
+    .cost{font-size:.74rem;color:rgba(255,255,255,.4);margin-top:8px;text-align:right}
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>🛡️ Pre-check de Anuncios</h1>
+  <p class="sub">Antes de subir un creativo a Meta, Claude lo evalúa contra Meta Ads Policy + Special Ad Category (Credit) + nuestra historia de rechazos. Te dice si va a rebotar y te da una versión que SÍ pasa. <a href="/docs/meta-ads-playbook.md" target="_blank">Ver playbook completo →</a></p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Tu creativo</h2>
+
+      <label>Token de acceso</label>
+      <input id="token" type="password" placeholder="Tu DASHBOARD_TOKEN" />
+
+      <label>Headline (título principal)</label>
+      <input id="headline" placeholder="¿Conoces la filosofía Pareto?" />
+
+      <label>Primary text (cuerpo)</label>
+      <textarea id="primary" placeholder="Hay una manera de estructurar capital con un horizonte de 12-24 meses..."></textarea>
+
+      <label>CTA button</label>
+      <select id="cta">
+        <option value="Enviar mensaje">Enviar mensaje (Send Message)</option>
+        <option value="Saber más">Saber más (Learn More)</option>
+        <option value="Solicitar más información">Solicitar más información</option>
+        <option value="Aplicar ahora">⚠️ Aplicar ahora (alto riesgo)</option>
+        <option value="Compra ya">⚠️ Compra ya (alto riesgo)</option>
+      </select>
+
+      <label>Descripción de la imagen (qué se ve)</label>
+      <textarea id="image" placeholder="ej. Foto de gráfica financiera con líneas ascendentes en fondo dorado, sin texto"></textarea>
+
+      <label>Landing URL (opcional)</label>
+      <input id="landing" placeholder="https://www.infinitylegacy.io/programa-acceso" />
+
+      <button class="btn primary" id="check">🔍 Evaluar con Claude</button>
+
+      <div class="meta-info">
+        💡 <strong>Tip:</strong> entre más detalle des, mejor evaluación. Si tienes imagen, descríbela en palabras (qué se ve, si tiene texto, qué colores).
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Resultado</h2>
+      <div id="output">
+        <div class="empty">Llena el formulario y presiona "Evaluar con Claude".<br><br>Recibirás:<br>• Score de riesgo (0-100)<br>• Veredicto: PASS / REVIEW / REJECT<br>• Flags específicas por tier<br>• Copy reescrito que pasa Meta<br>• Qué del original SÍ funciona</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Cargar token de localStorage si existe
+const tokenInput = document.getElementById('token');
+tokenInput.value = localStorage.getItem('precheck_token') || '';
+const urlToken = new URLSearchParams(location.search).get('t');
+if (urlToken) tokenInput.value = urlToken;
+
+const $ = id => document.getElementById(id);
+const out = $('output');
+
+function renderResult(r) {
+  if (!r.ok) {
+    out.innerHTML = `<div class="empty" style="color:var(--red)">Error: ${r.error || 'desconocido'}<br><br><pre style="color:rgba(255,255,255,.5);font-size:.74rem;text-align:left;white-space:pre-wrap">${r.raw || ''}</pre></div>`;
+    return;
+  }
+  const verdict = (r.verdict || 'REVIEW').toUpperCase();
+  const verdictClass = verdict === 'PASS' ? 'pass' : verdict === 'REJECT' ? 'reject' : 'review';
+  const verdictEmoji = verdict === 'PASS' ? '✅' : verdict === 'REJECT' ? '🚫' : '⚠️';
+  const verdictText = verdict === 'PASS' ? 'PASA META' : verdict === 'REJECT' ? 'META LO RECHAZARÁ' : 'REVISAR ANTES DE SUBIR';
+
+  let html = `
+    <div class="score-box ${verdictClass}">
+      <div class="score-num">${r.risk_score ?? '?'}</div>
+      <div class="score-info">
+        <div class="score-verdict">${verdictEmoji} ${verdictText}</div>
+        <div class="score-reason">${r.reasoning || ''}</div>
+      </div>
+    </div>
+  `;
+
+  if (r.flags && r.flags.length) {
+    html += `<h3 style="font-size:.85rem;color:var(--gold);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 8px">🚩 ${r.flags.length} flag${r.flags.length>1?'s':''} encontrada${r.flags.length>1?'s':''}</h3>`;
+    html += '<div class="flag-list">';
+    for (const f of r.flags) {
+      html += `<div class="flag tier-${f.tier || 3}">
+        <span class="loc">Tier ${f.tier} · ${f.location || 'general'}</span><br>
+        <strong>${f.issue || ''}</strong><br>
+        ${f.evidence ? `Evidencia: <span class="ev">${f.evidence}</span>` : ''}
+      </div>`;
+    }
+    html += '</div>';
+  }
+
+  if (r.rewrite) {
+    html += `<h3 style="font-size:.85rem;color:var(--gold);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px">✨ Copy reescrito (este SÍ pasa)</h3>`;
+    html += `<div class="rewrite">`;
+    if (r.rewrite.headline) html += `<div class="field"><div class="field-label">Headline</div><div class="field-val">${r.rewrite.headline}</div></div>`;
+    if (r.rewrite.primary_text) html += `<div class="field"><div class="field-label">Primary Text</div><div class="field-val">${r.rewrite.primary_text}</div></div>`;
+    if (r.rewrite.cta_button) html += `<div class="field"><div class="field-label">CTA Button</div><div class="field-val">${r.rewrite.cta_button}</div></div>`;
+    if (r.rewrite.disclaimer) html += `<div class="field"><div class="field-label">Disclaimer (poner al final)</div><div class="field-val" style="font-size:.78rem;font-style:italic">${r.rewrite.disclaimer}</div></div>`;
+    html += `<button class="btn" style="background:rgba(199,167,108,.18);color:var(--gold);border:1px solid var(--gold);padding:8px 16px;font-size:.84rem;margin-top:8px" onclick="copyRewrite()">📋 Copiar copy reescrito</button>`;
+    html += `</div>`;
+  }
+
+  if (r.keep && r.keep.length) {
+    html += `<h3 style="font-size:.85rem;color:var(--green);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px">✅ Esto del original SÍ funciona — no lo cambies</h3>`;
+    html += '<div class="keep-list">';
+    for (const k of r.keep) html += `<div class="keep-item">• ${k}</div>`;
+    html += '</div>';
+  }
+
+  if (r.cost_usd != null) {
+    html += `<div class="cost">Análisis: $${r.cost_usd.toFixed(4)} USD · ${r.tokens_in}→${r.tokens_out} tokens</div>`;
+  }
+
+  out.innerHTML = html;
+  window.__lastResult = r;
+}
+
+window.copyRewrite = () => {
+  const r = window.__lastResult;
+  if (!r || !r.rewrite) return;
+  const text = [
+    r.rewrite.headline ? '🪧 ' + r.rewrite.headline : '',
+    r.rewrite.primary_text || '',
+    r.rewrite.disclaimer ? '\n\n— ' + r.rewrite.disclaimer : '',
+  ].filter(Boolean).join('\n\n');
+  navigator.clipboard.writeText(text).then(() => alert('Copy reescrito copiado ✓'));
+};
+
+$('check').addEventListener('click', async () => {
+  const token = tokenInput.value.trim();
+  if (!token) { alert('Pega tu DASHBOARD_TOKEN primero'); return; }
+  localStorage.setItem('precheck_token', token);
+
+  const body = {
+    headline: $('headline').value.trim(),
+    primary_text: $('primary').value.trim(),
+    cta_button: $('cta').value,
+    image_description: $('image').value.trim(),
+    landing_url: $('landing').value.trim(),
+  };
+  if (!body.primary_text && !body.headline) { alert('Pon al menos headline o primary text'); return; }
+
+  $('check').disabled = true;
+  $('check').textContent = '⏳ Claude evaluando…';
+  out.innerHTML = '<div class="loading">⏳ Evaluando con Claude Sonnet 4.5…<br>~5-10 segundos</div>';
+
+  try {
+    const r = await fetch(`/api/ad-precheck?t=${encodeURIComponent(token)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await r.json();
+    renderResult(data);
+  } catch (e) {
+    out.innerHTML = `<div class="empty" style="color:var(--red)">Error de red: ${e.message}</div>`;
+  } finally {
+    $('check').disabled = false;
+    $('check').textContent = '🔍 Evaluar con Claude';
+  }
+});
+</script>
+</body>
+</html>
