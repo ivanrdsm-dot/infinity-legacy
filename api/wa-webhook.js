@@ -350,8 +350,6 @@ async function generateBotResponse(lead) {
     funnelHint = `\n⚠️ Este lead viene de un retargeting (ya nos vio antes). Reconoce ese contexto sutilmente — "qué bueno que regresas" — y avanza más rápido al cierre.`;
   }
 
-  const calendlyLink = process.env.CALENDLY_LINK || 'https://calendly.com/infinitylegacy';
-
   // Inject lead context as a system reminder at the end of system prompt
   const leadContext = `
 # 📌 CONTEXTO DE ESTE LEAD ESPECÍFICO
@@ -365,12 +363,16 @@ async function generateBotResponse(lead) {
 - Lead score: ${lead.lead_score || 0}/100
 ${funnelHint}
 
-# 🔗 LINKS REALES (usa estos, NO placeholders)
-- Calendly (para agendar sesión 60min): ${calendlyLink}
+# 🔗 LINKS REALES Y FLUJO DE AGENDA
 - Calculadora del Programa de Acceso: https://www.infinitylegacy.io/programa-acceso#calculadora
 - Landing principal: https://www.infinitylegacy.io/programa-acceso
 
-⚠️ Cuando el system prompt dice "[CALENDLY_LINK]" o equivalente, SIEMPRE substitúyelo por el link real de arriba. Nunca envíes "[CALENDLY_LINK]" literal al cliente.
+⚠️ FLUJO DE AGENDA (sin Calendly por ahora):
+Cuando el lead quiera agendar la sesión de 60 min, NO le pases ningún link.
+En su lugar di EXACTO algo como:
+"Perfecto. Le paso tu contacto a Iván del equipo principal. Él te escribe desde este mismo WhatsApp en menos de 30 min con 2-3 horarios disponibles esta semana para que escojas el que mejor te acomode. Mientras tanto, ¿me confirmas tu nombre completo para tenerlo en el contexto cuando llegue?"
+
+Esto es importante: Iván coordina la agenda manual desde el dashboard. No menciones Calendly ni links externos de agenda.
 
 Usa este contexto SUTILMENTE. NUNCA digas literal "veo que tu lead score es X" ni "vi que viniste del ad image_narrativa5pct".`;
 
