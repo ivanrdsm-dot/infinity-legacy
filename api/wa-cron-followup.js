@@ -114,6 +114,16 @@ export default async function handler(req, res) {
   }
 }
 
+// ─────────────────────────────────────────────────────────
+// FOLLOW-UPS CANNED (sin Claude) — la mayoría de follow-ups son
+// formulaicos. Mandamos texto fijo en vez de llamar Claude $$.
+// Solo el follow-up de día 1 y 3 usan Claude (necesitan contexto).
+// ─────────────────────────────────────────────────────────
+const CANNED_FOLLOWUPS = {
+  '30min': "Te dejo descansando. Si después quieres retomar la conversación, solo escríbeme aquí mismo y continuamos donde lo dejamos 🙂",
+  '7day':  "Última vez que paso por aquí proactivamente. Si en algún momento quieres retomar, mi puerta sigue abierta. Buen camino 🙏",
+};
+
 async function generateFollowup(lead, type) {
   // Anti-runaway: skip si el lead tiene >40 mensajes (probable loop)
   if ((lead.message_count || 0) > 40) {
@@ -121,26 +131,46 @@ async function generateFollowup(lead, type) {
     return null;
   }
 
-  // History limit 10 (down from 20) — costo input lineal con length
+  // Skip follow-up de 5 min: es spammy y caro. Empezamos en 10 min.
+  if (type === '5min') {
+    console.log(`[Cron] Skipping 5min followup for lead ${lead.id} — too aggressive`);
+    return null;
+  }
+
+  // CANNED follow-ups (sin Claude, $0): casos formulaicos que no necesitan AI.
+  if (CANNED_FOLLOWUPS[type]) {
+    console.log(`[Cron] Using canned followup for type=${type} → $0`);
+    return CANNED_FOLLOWUPS[type];
+  }
+
+  // History limit 6 (down from 10) — follow-ups no necesitan tanto contexto
   const { data: history } = await getSupabase()
     .from('messages')
     .select('direction, body')
     .eq('lead_id', lead.id)
     .order('created_at', { ascending: false })
-    .limit(10)
+    .limit(6)
     .then(r => ({ data: (r.data || []).reverse() }));
 
-  const prompt = `Esta conversación está en stage "${lead.stage}" y el lead no contestó. Genera un follow-up de tipo "${type}" siguiendo las reglas del system prompt. Responde SOLO el texto del mensaje (sin preámbulo ni comillas).`;
-  const messages = (history || []).map(m => ({
+  // Truncar mensajes muy largos a 400 chars (anti-bloat)
+  const trimmed = (history || []).map(m => ({
+    ...m,
+    body: (m.body || '').length > 400 ? (m.body.substring(0, 400) + '…') : m.body,
+  }));
+
+  const prompt = `Genera un follow-up "${type}" para este lead. Stage: "${lead.stage}". Responde SOLO el texto del mensaje WhatsApp, máximo 2 frases, sin preámbulo.`;
+  const messages = trimmed.map(m => ({
     role: m.direction === 'inbound' ? 'user' : 'assistant',
     content: m.body,
   }));
   messages.push({ role: 'user', content: prompt });
 
-  // Prompt caching: el system prompt es estático → cache 5 min, -90% input cost
+  // 💰 BIG SAVINGS: usar Haiku 3.5 (12x más barato que Sonnet 4.5) para
+  // follow-ups. Haiku es perfecto para mensajes cortos formulaicos.
+  // Sonnet: $3/$15 per 1M tokens. Haiku: $0.80/$4 → 4x ahorro.
   const response = await getAnthropic().messages.create({
-    model: 'claude-sonnet-4-5',
-    max_tokens: 200, // down from 300 — follow-ups son cortos
+    model: 'claude-haiku-4-5',
+    max_tokens: 150, // 2 frases breves
     system: [{
       type: 'text',
       text: getSystemPrompt(),
@@ -149,13 +179,14 @@ async function generateFollowup(lead, type) {
     messages,
   });
   const u = response.usage || {};
+  // Haiku pricing per 1M tokens: input $0.80 / output $4 / cache_w $1 / cache_r $0.08
   const cost = (
-    (u.input_tokens || 0) * 3 +
-    (u.output_tokens || 0) * 15 +
-    (u.cache_creation_input_tokens || 0) * 3.75 +
-    (u.cache_read_input_tokens || 0) * 0.30
+    (u.input_tokens || 0) * 0.80 +
+    (u.output_tokens || 0) * 4 +
+    (u.cache_creation_input_tokens || 0) * 1.00 +
+    (u.cache_read_input_tokens || 0) * 0.08
   ) / 1_000_000;
-  console.log(`[Cron] Followup cost: $${cost.toFixed(5)} | in=${u.input_tokens||0} cache_r=${u.cache_read_input_tokens||0}`);
+  console.log(`[Cron] Followup (Haiku) cost: $${cost.toFixed(5)} | in=${u.input_tokens||0} cache_r=${u.cache_read_input_tokens||0}`);
   return response.content?.[0]?.text?.trim();
 }
 

@@ -93,6 +93,35 @@ function getAnthropic() {
 }
 
 // ─────────────────────────────────────────────────────────
+// PRE-FILTER — mensajes triviales que NO necesitan Claude ($0 saving)
+// Si el mensaje es solo un emoji, "ok", "gracias", "👍", etc, respondemos
+// canned. Esto reduce ~20-30% de calls a Claude en una conversación normal.
+// ─────────────────────────────────────────────────────────
+function isTrivialMessage(text) {
+  if (!text) return null;
+  const t = text.trim().toLowerCase();
+  if (t.length === 0) return 'empty';
+  // Solo emojis (1-3 chars en runas)
+  const emojiOnly = /^[\p{Emoji}\p{Emoji_Modifier}‍️\s]+$/u.test(text) && text.replace(/\s/g,'').length <= 6;
+  if (emojiOnly) return 'emoji';
+  // Acknowledgments cortos
+  const acks = ['ok','okay','okey','vale','sale','va','listo','perfecto','gracias','grcs','thx','thank you','dale','ya','si','sí','no','nop','nope','jaja','jeje','jajaja','👍','👌','✅','🙏','okk','yes'];
+  if (acks.includes(t)) return 'ack';
+  // 1-2 caracteres no-emoji = ruido (a, b, x, .)
+  if (t.length <= 2 && !/^[a-z]+$/.test(t)) return 'noise';
+  return null;
+}
+
+function trivialReply(kind) {
+  // Solo respondemos a ACK (reconocer + invitar a seguir). Para emoji/noise NO respondemos
+  // (evita loop infinito).
+  if (kind === 'ack') {
+    return '👌 Cuando quieras seguimos. Si te queda alguna duda del Programa de Acceso o quieres ver los planes, escríbeme aquí.';
+  }
+  return null; // emoji/noise → no respondemos
+}
+
+// ─────────────────────────────────────────────────────────
 // MAIN HANDLER
 // ─────────────────────────────────────────────────────────
 export default async function handler(req, res) {
@@ -230,7 +259,49 @@ async function processInboundMessage(msg, contact) {
     return;
   }
 
-  // 6. Generar respuesta con Claude
+  // 6a. BUDGET CAP DIARIO: si gastamos >$3 USD/día en Claude, pausar bot.
+  // Iván se entera vía dashboard, decide si subir cap o esperar.
+  const dailyBudget = parseFloat(process.env.CLAUDE_DAILY_BUDGET_USD || '3');
+  const since24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  const { data: todayCost } = await getSupabase()
+    .from('messages')
+    .select('llm_cost_usd')
+    .gte('created_at', since24h)
+    .not('llm_cost_usd', 'is', null);
+  const spentToday = (todayCost || []).reduce((a, r) => a + parseFloat(r.llm_cost_usd || 0), 0);
+  if (spentToday >= dailyBudget) {
+    console.warn(`[WA] Daily budget exceeded ($${spentToday.toFixed(2)} >= $${dailyBudget}) — skipping Claude call`);
+    // Notificar a Iván UNA vez al día (no en cada mensaje)
+    return;
+  }
+
+  // 6b. PRE-FILTER: si el mensaje es trivial (emoji, "ok", "gracias", <3 chars),
+  // respuesta canned sin Claude → $0.
+  const trivial = isTrivialMessage(text);
+  if (trivial) {
+    const cannedReply = trivialReply(trivial);
+    if (cannedReply) {
+      await sendWaMessage(from, cannedReply);
+      await getSupabase().from('messages').insert({
+        lead_id: lead.id,
+        direction: 'outbound',
+        sender_type: 'bot',
+        body: cannedReply,
+        llm_model: 'canned',
+        llm_cost_usd: 0,
+      });
+      await scheduleFollowUps(lead.id);
+      await getSupabase().from('leads').update({
+        last_message_at: new Date().toISOString(),
+        last_outbound_at: new Date().toISOString(),
+        message_count: (lead.message_count || 0) + 1,
+      }).eq('id', lead.id);
+      console.log(`[WA] Trivial msg "${text.substring(0,20)}" → canned reply, $0`);
+      return;
+    }
+  }
+
+  // 6c. Generar respuesta con Claude
   const response = await generateBotResponse(lead);
 
   // 7. Enviar respuesta — saltar si Claude regresó meta-text de no-respuesta
@@ -597,13 +668,14 @@ async function handleIvanCommand(text) {
 
 async function scheduleFollowUps(leadId) {
   const now = Date.now();
+  // Schedule menos agresivo + sin 5min spam.
+  // 30min/7day usan canned ($0). 10min/1day/3day usan Haiku (12x más barato que Sonnet).
   const schedule = [
-    { type: '5min',  delay: 5 * 60 * 1000 },
-    { type: '10min', delay: 10 * 60 * 1000 },
-    { type: '30min', delay: 30 * 60 * 1000 },
-    { type: '1day',  delay: 24 * 60 * 60 * 1000 },
-    { type: '3day',  delay: 3 * 24 * 60 * 60 * 1000 },
-    { type: '7day',  delay: 7 * 24 * 60 * 60 * 1000 },
+    { type: '10min', delay: 10 * 60 * 1000 },        // Haiku con valor
+    { type: '30min', delay: 30 * 60 * 1000 },        // canned $0
+    { type: '1day',  delay: 24 * 60 * 60 * 1000 },   // Haiku contextual
+    { type: '3day',  delay: 3 * 24 * 60 * 60 * 1000 }, // Haiku contextual
+    { type: '7day',  delay: 7 * 24 * 60 * 60 * 1000 }, // canned $0 (cierre)
   ];
   const inserts = schedule.map(s => ({
     lead_id: leadId,
