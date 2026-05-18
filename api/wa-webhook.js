@@ -366,34 +366,64 @@ Usa este contexto SUTILMENTE. NUNCA digas literal "veo que tu lead score es X" n
 }
 
 // ─────────────────────────────────────────────────────────
+// NORMALIZE MEXICAN PHONE NUMBER
+// México mobile webhooks llegan como 521XXXXXXXXXX (con el "1" móvil),
+// pero Cloud API requiere enviar sin el "1": 52XXXXXXXXXX.
+// Si el send falla con not-in-allowed-list, intentamos el otro formato.
+// ─────────────────────────────────────────────────────────
+function mxToggle(phone) {
+  if (!phone) return phone;
+  // 521XXXXXXXXXX (13 dígitos) → 52XXXXXXXXXX (12 dígitos)
+  if (/^521\d{10}$/.test(phone)) return '52' + phone.slice(3);
+  // 52XXXXXXXXXX (12 dígitos, México) → 521XXXXXXXXXX (13 dígitos)
+  if (/^52\d{10}$/.test(phone)) return '521' + phone.slice(2);
+  return phone;
+}
+
+// ─────────────────────────────────────────────────────────
 // SEND WHATSAPP MESSAGE via Meta Cloud API
 // ─────────────────────────────────────────────────────────
 async function sendWaMessage(to, body) {
   const url = `https://graph.facebook.com/v21.0/${process.env.WA_PHONE_NUMBER_ID}/messages`;
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.WA_ACCESS_TOKEN}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      messaging_product: 'whatsapp',
-      to,
-      type: 'text',
-      text: { body, preview_url: true },
-    }),
-  });
-  // Lee body UNA sola vez — fix del "Body has already been read"
-  const text = await resp.text();
-  if (!resp.ok) {
-    console.error('[WA send] Failed:', resp.status, text);
-    return { error: true, status: resp.status, body: text };
+
+  async function attempt(toNumber) {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.WA_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: toNumber,
+        type: 'text',
+        text: { body, preview_url: true },
+      }),
+    });
+    const text = await resp.text();
+    let parsed = null;
+    try { parsed = JSON.parse(text); } catch (e) { /* keep raw */ }
+    return { resp, text, parsed };
   }
-  try {
-    return JSON.parse(text);
-  } catch (e) {
-    return { raw: text };
+
+  // Intento 1: número tal cual viene del webhook
+  let { resp, text, parsed } = await attempt(to);
+  if (resp.ok) return parsed || { raw: text };
+
+  // Intento 2: si falló con "not in allowed list" (131030) o "phone number not valid" (131026),
+  // probar con el formato MX inverso (con/sin el "1").
+  const isMxRetryable = parsed?.error?.code === 131030 || parsed?.error?.code === 131026;
+  const alt = mxToggle(to);
+  if (isMxRetryable && alt && alt !== to) {
+    console.warn(`[WA send] retry with MX-toggle: ${to} → ${alt}`);
+    const r2 = await attempt(alt);
+    if (r2.resp.ok) return r2.parsed || { raw: r2.text };
+    console.error('[WA send] Failed (both formats):', r2.resp.status, r2.text);
+    return { error: true, status: r2.resp.status, body: r2.text };
   }
+
+  console.error('[WA send] Failed:', resp.status, text);
+  return { error: true, status: resp.status, body: text };
 }
 
 // ─────────────────────────────────────────────────────────

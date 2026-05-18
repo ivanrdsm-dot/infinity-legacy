@@ -138,18 +138,35 @@ async function generateFollowup(lead, type) {
   return response.content?.[0]?.text?.trim();
 }
 
+function mxToggle(phone) {
+  if (!phone) return phone;
+  if (/^521\d{10}$/.test(phone)) return '52' + phone.slice(3);
+  if (/^52\d{10}$/.test(phone)) return '521' + phone.slice(2);
+  return phone;
+}
+
 async function sendWaMessage(to, body) {
-  await fetch(`https://graph.facebook.com/v21.0/${process.env.WA_PHONE_NUMBER_ID}/messages`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.WA_ACCESS_TOKEN}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      messaging_product: 'whatsapp',
-      to,
-      type: 'text',
-      text: { body },
-    }),
-  });
+  const url = `https://graph.facebook.com/v21.0/${process.env.WA_PHONE_NUMBER_ID}/messages`;
+  async function attempt(toNumber) {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.WA_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messaging_product: 'whatsapp', to: toNumber, type: 'text', text: { body } }),
+    });
+    const text = await resp.text();
+    let parsed = null;
+    try { parsed = JSON.parse(text); } catch (e) {}
+    return { resp, text, parsed };
+  }
+  let { resp, text, parsed } = await attempt(to);
+  if (resp.ok) return;
+  const isMxRetryable = parsed?.error?.code === 131030 || parsed?.error?.code === 131026;
+  const alt = mxToggle(to);
+  if (isMxRetryable && alt && alt !== to) {
+    const r2 = await attempt(alt);
+    if (r2.resp.ok) return;
+    console.error('[Cron WA send] failed (both):', r2.resp.status, r2.text);
+    return;
+  }
+  console.error('[Cron WA send] failed:', resp.status, text);
 }
