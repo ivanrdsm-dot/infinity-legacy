@@ -209,6 +209,21 @@ async function processInboundMessage(msg, contact) {
   const text = msg.text?.body || msg.button?.text || msg.interactive?.button_reply?.title || '[non-text]';
   const wa_message_id = msg.id;
 
+  // 🔒 IDEMPOTENCIA: skip si ya procesamos este message_id
+  if (wa_message_id) {
+    try {
+      const { data: existing } = await getSupabase()
+        .from('messages')
+        .select('id')
+        .eq('wa_message_id', wa_message_id)
+        .maybeSingle();
+      if (existing) {
+        console.log(`[WA] Duplicate ${wa_message_id} — skipping`);
+        return;
+      }
+    } catch (e) { /* continue if check fails */ }
+  }
+
   // ─── IVÁN COMMAND HANDLER ───
   // Si el mensaje viene del número personal de Iván Y empieza con "/",
   // lo trato como comando administrativo (NO se lo envío a un lead).

@@ -270,6 +270,22 @@ async function processIgEvent(event, entry) {
 
   if (!hasText) return;
 
+  // 🔒 IDEMPOTENCIA: si este message_id ya lo procesamos antes, skip.
+  // Meta a veces re-envía webhooks (retries) y eso causa respuestas duplicadas.
+  if (messageId) {
+    try {
+      const { data: existing } = await getSupabase()
+        .from('messages')
+        .select('id')
+        .eq('wa_message_id', messageId)
+        .maybeSingle();
+      if (existing) {
+        console.log(`[IG] Duplicate message_id ${messageId} — skipping (already processed)`);
+        return;
+      }
+    } catch (e) { /* if check fails, continue anyway */ }
+  }
+
   console.log(`[IG] DM from ${senderId}: "${messageText.substring(0, 60)}"`);
 
   // 1. Upsert lead (channel = 'instagram')
