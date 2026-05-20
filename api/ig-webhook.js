@@ -201,7 +201,7 @@ export default async function handler(req, res) {
 // ─────────────────────────────────────────────────────────
 async function insertMessageRobust(payload) {
   let r = await getSupabase().from('messages').insert(payload);
-  if (r.error && (r.error.code === '42703' || /column .* does not exist/i.test(r.error.message))) {
+  if (r.error && (r.error.code === '42703' || /column .* does not exist/i.test(r.error.message) || /could not find the .* column/i.test(r.error.message))) {
     // Quitar campos que no existen y reintentar
     const stripped = { ...payload };
     delete stripped.channel;
@@ -316,7 +316,7 @@ async function upsertIgLead(igUserId, firstMessage) {
     .eq('ig_user_id', igUserId)
     .maybeSingle();
 
-  if (sel.error && sel.error.code === '42703') {
+  if (sel.error && (sel.error.code === '42703' || /column .* does not exist/i.test(sel.error.message) || /could not find the .* column/i.test(sel.error.message))) {
     // Column doesn't exist → fall back to wa_phone with prefix
     sel = await getSupabase().from('leads').select('*').eq('wa_phone', 'ig:' + igUserId).maybeSingle();
   }
@@ -344,7 +344,7 @@ async function upsertIgLead(igUserId, firstMessage) {
   // Try to also include ig_user_id and channel if columns exist (Supabase ignora keys que no existen? No, falla)
   // Hacemos dos intentos: con columna ig_user_id, sin ella
   let ins = await getSupabase().from('leads').insert({ ...insertPayload, ig_user_id: igUserId, channel: 'instagram' }).select().single();
-  if (ins.error && (ins.error.code === '42703' || /column .* does not exist/i.test(ins.error.message))) {
+  if (ins.error && (ins.error.code === '42703' || /column .* does not exist/i.test(ins.error.message) || /could not find the .* column/i.test(ins.error.message))) {
     // Re-try without the new columns
     ins = await getSupabase().from('leads').insert(insertPayload).select().single();
   }
