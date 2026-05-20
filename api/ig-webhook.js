@@ -223,13 +223,52 @@ async function processIgEvent(event, entry) {
 
   const senderId = event.sender?.id;
   const recipientId = event.recipient?.id;
-  const messageText = event.message?.text || event.postback?.payload || '[non-text IG]';
   const messageId = event.message?.mid || event.postback?.mid;
   const timestamp = event.timestamp;
 
-  if (!senderId || !messageText) return;
+  if (!senderId) return;
   // Skip messages where sender == our IG account (shouldn't happen but safety)
   if (senderId === process.env.IG_BUSINESS_ACCOUNT_ID) return;
+  if (senderId === '27468049006158992') return; // hardcoded fallback if env not set
+
+  // Detect message type — react smartly to non-text without hallucinating
+  const textRaw = event.message?.text || event.postback?.payload;
+  const hasText = textRaw && textRaw.trim().length > 0;
+  let messageText = textRaw || '';
+
+  // Detect non-text content
+  const attachments = event.message?.attachments || [];
+  const isImage = attachments.some(a => a.type === 'image');
+  const isAudio = attachments.some(a => a.type === 'audio');
+  const isVideo = attachments.some(a => a.type === 'video');
+  const isSticker = attachments.some(a => a.type === 'image' && a.payload?.sticker_id);
+  const isReaction = !!event.reaction;
+  const hasAttachment = attachments.length > 0;
+
+  // If no text and no attachment, skip (probably a system event)
+  if (!hasText && !hasAttachment && !isReaction) {
+    console.log('[IG] Empty event, skipping');
+    return;
+  }
+
+  // For non-text messages, respond with canned message (DO NOT call Claude)
+  if (!hasText && hasAttachment) {
+    const type = isImage ? 'imagen' : isAudio ? 'audio' : isVideo ? 'video' : isSticker ? 'sticker' : 'archivo';
+    const cannedReply = `Recibí tu ${type} 🙂 De este lado solo puedo conversar por texto. Cuéntame con palabras qué te interesa del Programa de Acceso y te ayudo con todo el detalle.`;
+    try {
+      await sendIgMessage(senderId, cannedReply);
+      console.log(`[IG] Canned reply for ${type} → ${senderId}`);
+    } catch (e) { console.error('[IG] canned send failed:', e.message); }
+    return;
+  }
+
+  if (isReaction) {
+    // User reacted to our message — don't reply, just log
+    console.log('[IG] User reaction event — no reply');
+    return;
+  }
+
+  if (!hasText) return;
 
   console.log(`[IG] DM from ${senderId}: "${messageText.substring(0, 60)}"`);
 
