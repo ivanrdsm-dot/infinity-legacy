@@ -32,6 +32,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import fs from 'node:fs';
 import path from 'node:path';
 import ws from 'ws';
+import { recalcAndPersistScore } from './wa-bot/lead-scoring.js';
+import { auditMessage, shouldBlock } from './wa-bot/compliance-audit.js';
 
 // Disable Vercel body parser — we need raw body for Meta signature verification
 export const config = {
@@ -263,8 +265,15 @@ async function processInboundMessage(msg, contact) {
   });
 
   // 3.5 EXTRACT DATA from message + persist (email, phone, intent signals)
-  // + notify Iván if hot signals detected
   await extractAndPersistLeadData(lead, text);
+
+  // 3.6 RECALC lead score (based on all inbound messages + data captured)
+  try {
+    const scoreResult = await recalcAndPersistScore(getSupabase(), lead);
+    lead.lead_score = scoreResult.score;
+    lead.tier = scoreResult.tier;
+    console.log(`[WA] Lead ${lead.id} score: ${scoreResult.score} (${scoreResult.tier_emoji} ${scoreResult.tier})`);
+  } catch (e) { console.error('[WA] score calc failed:', e.message); }
 
   // 4. Cancelar follow-ups pendientes (el lead ya respondió)
   await getSupabase().from('follow_ups')
@@ -330,6 +339,26 @@ async function processInboundMessage(msg, contact) {
     /^\(no\s*response/i.test(txt) ||
     txt.length < 5;
   if (txt && !isMetaNoResponse) {
+    // 🛡️ COMPLIANCE AUDIT (Haiku ~$0.0001) — block messages with critical/high violations
+    const audit = await auditMessage(getAnthropic(), txt);
+    if (shouldBlock(audit)) {
+      console.warn(`[WA] 🚨 BLOCKED message for lead ${lead.id}: ${audit.severity}`, audit.violations);
+      // Persist blocked attempt for audit log
+      await getSupabase().from('messages').insert({
+        lead_id: lead.id,
+        direction: 'outbound',
+        sender_type: 'bot',
+        body: '[BLOCKED BY COMPLIANCE] ' + txt,
+        llm_model: 'claude-sonnet-4-5+blocked',
+        llm_cost_usd: (response.cost_usd || 0) + (audit.audit_cost_usd || 0),
+      });
+      // Notify Iván
+      try {
+        await sendWaMessage(NOTIFY_NUMBER || '525646665718', `🚨 COMPLIANCE BLOCK\nLead: ${lead.wa_phone}\nSeverity: ${audit.severity}\nViolations: ${(audit.violations||[]).join(', ')}\n\nBlocked draft: "${txt.substring(0, 200)}..."`);
+      } catch (e) {}
+      // Don't send to lead — let bot try again on next message
+      return;
+    }
     await sendWaMessage(from, txt);
     await getSupabase().from('messages').insert({
       lead_id: lead.id,
@@ -339,7 +368,7 @@ async function processInboundMessage(msg, contact) {
       llm_model: 'claude-sonnet-4-5',
       llm_tokens_in: response.tokens_in,
       llm_tokens_out: response.tokens_out,
-      llm_cost_usd: response.cost_usd,
+      llm_cost_usd: (response.cost_usd || 0) + (audit.audit_cost_usd || 0),
     });
   }
 

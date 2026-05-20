@@ -484,10 +484,12 @@ async function refreshTopbar(){
 async function renderOverview(el, opts={}){
   if (!opts.silent) el.innerHTML = '<div class="empty-state"><div class="loading"></div></div>';
   try {
-    const [stats, cost] = await Promise.all([
+    const [stats, cost, hotLeadsRes] = await Promise.all([
       api('wa-dashboard?action=stats'),
       api('wa-dashboard?action=cost'),
+      api('wa-dashboard?action=hot-leads'),
     ]);
+    const hotLeads = (hotLeadsRes.leads || []).filter(l => (l.lead_score || 0) > 0);
     el.innerHTML = `
       <div class="grid-4">
         <div class="kpi">
@@ -545,6 +547,41 @@ async function renderOverview(el, opts={}){
             <div style="display:flex;align-items:center;gap:10px"><span style="color:var(--text-3)">○</span>Instagram Messaging — pendiente fase 2</div>
           </div>
         </div>
+      </div>
+
+      <div style="margin-top:20px" class="card">
+        <div class="card-header">
+          <div class="card-title">🔥 TOP HOT LEADS — Llama YA</div>
+          <a href="#inbox" onclick="navigate('inbox')" style="font-size:11px;color:var(--gold)">Ver todos →</a>
+        </div>
+        ${hotLeads.length ? `
+          <div style="display:flex;flex-direction:column;gap:8px">
+          ${hotLeads.slice(0, 10).map(l => {
+            const tierColor = l.tier === 'HOT' ? 'var(--red)' : l.tier === 'WARM' ? 'var(--orange)' : l.tier === 'LUKEWARM' ? 'var(--blue)' : 'var(--text-3)';
+            const channelEmoji = l.channel === 'instagram' ? '📷' : '💬';
+            return `
+            <div onclick="window.open('/wa-dashboard.html?t=${encodeURIComponent(TOKEN)}#${l.id}','_blank')" style="display:flex;align-items:center;gap:14px;padding:10px 12px;background:var(--bg-1);border:1px solid var(--border-1);border-left:3px solid ${tierColor};border-radius:8px;cursor:pointer;transition:all .14s" onmouseover="this.style.background='var(--bg-3)'" onmouseout="this.style.background='var(--bg-1)'">
+              <div style="font-size:24px;font-weight:700;color:${tierColor};min-width:50px;text-align:center">
+                <div>${l.tier_emoji}</div>
+                <div style="font-size:14px;line-height:1">${l.lead_score || 0}</div>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+                  <strong style="font-size:13px">${escapeHtml(l.full_name || l.wa_name || l.wa_phone || 'Sin nombre')}</strong>
+                  <span style="font-size:10px;color:${tierColor};font-weight:700;letter-spacing:.06em">${l.tier}</span>
+                </div>
+                <div style="font-size:11px;color:var(--text-3)">${channelEmoji} ${l.channel || 'WA'} · ${l.message_count || 0} msgs · ${timeAgo(l.last_message_at)}</div>
+                ${l.last_inbound ? `<div style="font-size:11px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:4px">"${escapeHtml(l.last_inbound.substring(0, 80))}"</div>` : ''}
+              </div>
+              <div style="display:flex;flex-direction:column;gap:3px;font-size:10px;color:var(--text-3);text-align:right">
+                ${l.email ? `<span>📧 ${l.email.substring(0,20)}…</span>` : ''}
+                ${l.lead_phone ? `<span>📱 ${l.lead_phone}</span>` : ''}
+                ${l.matched_plan ? `<span style="color:var(--purple);font-weight:600">${l.matched_plan}</span>` : ''}
+              </div>
+            </div>`;
+          }).join('')}
+          </div>
+        ` : `<div class="empty-state"><div class="msg">Aún no hay leads scored</div><div class="hint">Cuando Majo procese conversaciones, aquí aparecen los más calientes</div></div>`}
       </div>
 
       <div style="margin-top:20px" class="card">

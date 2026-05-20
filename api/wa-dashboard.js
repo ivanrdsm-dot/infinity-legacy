@@ -239,6 +239,40 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, wiped: counts });
     }
 
+    // ─── GET: top hot leads (priority queue) ───
+    if (req.method === 'GET' && action === 'hot-leads') {
+      const { data: hotLeads } = await supabase
+        .from('leads')
+        .select('id, wa_phone, wa_name, full_name, email, lead_phone, stage, matched_plan, lead_score, channel, last_message_at, message_count, priority')
+        .order('lead_score', { ascending: false, nullsFirst: false })
+        .limit(10);
+
+      // Pull last inbound message body per lead
+      const ids = (hotLeads || []).map(l => l.id);
+      let lastByLead = {};
+      if (ids.length) {
+        const { data: msgs } = await supabase
+          .from('messages').select('lead_id, body, created_at, direction')
+          .in('lead_id', ids).eq('direction', 'inbound')
+          .order('created_at', { ascending: false });
+        const seen = new Set();
+        for (const m of (msgs || [])) {
+          if (seen.has(m.lead_id)) continue;
+          seen.add(m.lead_id);
+          lastByLead[m.lead_id] = m.body;
+        }
+      }
+
+      const enriched = (hotLeads || []).map(l => ({
+        ...l,
+        last_inbound: lastByLead[l.id] || null,
+        tier: (l.lead_score || 0) >= 80 ? 'HOT' : (l.lead_score || 0) >= 60 ? 'WARM' : (l.lead_score || 0) >= 40 ? 'LUKEWARM' : 'COLD',
+        tier_emoji: (l.lead_score || 0) >= 80 ? '🔥' : (l.lead_score || 0) >= 60 ? '🌟' : (l.lead_score || 0) >= 40 ? '👀' : '❄️',
+      }));
+
+      return res.status(200).json({ ok: true, leads: enriched });
+    }
+
     // ─── GET: cost summary (Claude API gasto + breakdown) ───
     if (req.method === 'GET' && action === 'cost') {
       // últimas 24h, agrupado por día / por lead

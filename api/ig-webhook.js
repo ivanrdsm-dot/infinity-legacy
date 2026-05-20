@@ -28,6 +28,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import fs from 'node:fs';
 import path from 'node:path';
 import ws from 'ws';
+import { recalcAndPersistScore } from './wa-bot/lead-scoring.js';
+import { auditMessage, shouldBlock } from './wa-bot/compliance-audit.js';
 
 export const config = { api: { bodyParser: false } };
 
@@ -305,6 +307,14 @@ async function processIgEvent(event, entry) {
   // 2.5 EXTRACT DATA from message + persist (email, phone, intent signals)
   await extractAndPersistLeadData(lead, messageText);
 
+  // 2.6 RECALC lead score
+  try {
+    const scoreResult = await recalcAndPersistScore(getSupabase(), lead);
+    lead.lead_score = scoreResult.score;
+    lead.tier = scoreResult.tier;
+    console.log(`[IG] Lead ${lead.id} score: ${scoreResult.score} (${scoreResult.tier_emoji} ${scoreResult.tier})`);
+  } catch (e) { console.error('[IG] score calc failed:', e.message); }
+
   // 3. Cancel pending follow-ups
   await getSupabase().from('follow_ups')
     .update({ status: 'cancelled', cancelled_at: new Date().toISOString(), cancelled_reason: 'lead_responded' })
@@ -334,6 +344,33 @@ async function processIgEvent(event, entry) {
   const isMetaNoResponse = !txt || /^\*?\(?\s*no\s*response/i.test(txt) || txt.length < 5;
   if (!txt || isMetaNoResponse) return;
 
+  // 6.5 🛡️ COMPLIANCE AUDIT — bloquea mensajes con violaciones críticas/altas
+  const audit = await auditMessage(getAnthropic(), txt);
+  if (shouldBlock(audit)) {
+    console.warn(`[IG] 🚨 BLOCKED message for lead ${lead.id}: ${audit.severity}`, audit.violations);
+    await insertMessageRobust({
+      lead_id: lead.id, direction: 'outbound', sender_type: 'bot',
+      body: '[BLOCKED BY COMPLIANCE] ' + txt,
+      llm_model: 'claude-sonnet-4-5+blocked',
+      llm_cost_usd: (response.cost_usd || 0) + (audit.audit_cost_usd || 0),
+      channel: 'instagram',
+    });
+    // Notify Iván
+    try {
+      await fetch(`https://graph.facebook.com/v21.0/${process.env.WA_PHONE_NUMBER_ID}/messages`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: '525646665718',
+          type: 'text',
+          text: { body: `🚨 COMPLIANCE BLOCK IG\nLead: ${lead.wa_phone}\nSeverity: ${audit.severity}\nViolations: ${(audit.violations||[]).join(', ')}\n\nBlocked: "${txt.substring(0, 200)}..."` },
+        }),
+      });
+    } catch (e) {}
+    return;
+  }
+
   // 7. Send via IG API
   await sendIgMessage(senderId, txt);
 
@@ -346,7 +383,7 @@ async function processIgEvent(event, entry) {
     llm_model: 'claude-sonnet-4-5',
     llm_tokens_in: response.tokens_in,
     llm_tokens_out: response.tokens_out,
-    llm_cost_usd: response.cost_usd,
+    llm_cost_usd: (response.cost_usd || 0) + (audit.audit_cost_usd || 0),
     channel: 'instagram',
   });
 
