@@ -71,14 +71,16 @@ function getAnthropic() {
 // MAIN HANDLER
 // ─────────────────────────────────────────────────────────
 export default async function handler(req, res) {
-  // GET = Meta verifica el webhook
+  // GET = Meta verifica el webhook (usa IG_VERIFY_TOKEN dedicado, fallback a WA_VERIFY_TOKEN)
   if (req.method === 'GET') {
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
-    if (mode === 'subscribe' && token === process.env.WA_VERIFY_TOKEN) {
+    const expected = process.env.IG_VERIFY_TOKEN || process.env.WA_VERIFY_TOKEN;
+    if (mode === 'subscribe' && token === expected) {
       return res.status(200).send(challenge);
     }
+    console.warn('[IG] Webhook verify failed:', { mode, gotToken: token ? '(set)' : '(empty)' });
     return res.status(403).send('Forbidden');
   }
   if (req.method !== 'POST') return res.status(405).end();
@@ -351,15 +353,22 @@ ${channelHint}
 // SEND IG MESSAGE via Graph API
 // ─────────────────────────────────────────────────────────
 async function sendIgMessage(recipientId, text) {
-  const pageId = process.env.IG_PAGE_ID;
-  if (!pageId) {
-    console.error('[IG send] IG_PAGE_ID env var missing');
+  // Token specific para IG (preferred). Fallback al WA system user token si IG_ACCESS_TOKEN no está configurado.
+  const accessToken = process.env.IG_ACCESS_TOKEN || process.env.WA_ACCESS_TOKEN;
+  if (!accessToken) {
+    console.error('[IG send] no access token configured');
     return;
   }
-  const url = `https://graph.facebook.com/v21.0/${pageId}/messages`;
+  // La nueva "Instagram API with Instagram Login" usa endpoint /me/messages con el token IG
+  // Si usamos el viejo flow (Facebook Login + Page), usaríamos /{IG_PAGE_ID}/messages
+  const pageId = process.env.IG_PAGE_ID;
+  const url = pageId
+    ? `https://graph.facebook.com/v21.0/${pageId}/messages`
+    : `https://graph.instagram.com/v21.0/me/messages`;
+
   const resp = await fetch(url, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       recipient: { id: recipientId },
       message: { text },
