@@ -755,8 +755,23 @@ function renderDocs(el){
   </div>`;
 }
 
-function renderSettings(el){
+async function renderSettings(el){
   el.innerHTML = `
+    <div class="card" style="margin-bottom:14px;border-color:var(--orange);background:linear-gradient(180deg,rgba(245,158,11,.06),transparent)">
+      <div class="card-header"><div class="card-title" style="color:var(--orange)">⚠️ Acción pendiente — Activar n\xfamero real 5566253065</div></div>
+      <p style="font-size:13px;color:var(--text-1);margin-bottom:12px;line-height:1.55">
+        El n\xfamero 5566253065 est\xe1 verificado pero a\xfan en estado <strong style="color:var(--orange)">PENDING</strong> porque Meta tiene cach\xe9 server-side de la vieja cuenta WhatsApp Business.
+        Meta tarda 1-48h en liberar autom\xe1tico. Cuando creas que ya pas\xf3 tiempo, presiona <strong>Reintentar registro</strong>. Si funciona,
+        bot se activa solo + te llega notificaci\xf3n a tu WhatsApp personal.
+      </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button onclick="retryRegister()" id="btn-retry" style="background:var(--orange);color:var(--bg-0);border:0;padding:10px 18px;border-radius:8px;font-weight:700;font-size:13px">↻ Reintentar registro</button>
+        <button onclick="checkPhoneStatus()" id="btn-check" style="background:transparent;border:1px solid var(--border-2);color:var(--text-1);padding:10px 18px;border-radius:8px;font-size:13px">🔍 Solo verificar status</button>
+        <button onclick="swapToReal()" id="btn-swap" style="background:var(--green-soft);color:var(--green);border:1px solid var(--green);padding:10px 18px;border-radius:8px;font-weight:700;font-size:13px;display:none">✓ Swap a n\xfamero real ahora</button>
+      </div>
+      <div id="retry-result" style="margin-top:14px;font-size:12px;font-family:monospace;color:var(--text-2);padding:10px;background:var(--bg-1);border-radius:8px;display:none"></div>
+    </div>
+
     <div class="grid-2">
       <div class="card">
         <div class="card-header"><div class="card-title">Conexiones</div></div>
@@ -798,6 +813,46 @@ function renderSettings(el){
       </div>
     </div>
   `;
+}
+
+async function retryRegister(){
+  const btn = document.getElementById('btn-retry');
+  const out = document.getElementById('retry-result');
+  btn.disabled = true; btn.textContent = '⏳ Intentando...';
+  out.style.display = 'block';
+  out.textContent = 'Conectando con Meta Graph API…';
+  try {
+    const r = await api('wa-register-retry');
+    if (r.ok && (r.registered || r.already_connected)){
+      out.innerHTML = '<span style="color:var(--green)">✅ ' + (r.already_connected ? 'Ya estaba CONNECTED.' : '¡REGISTRO EXITOSO!') + '</span>\n\nStatus: ' + JSON.stringify(r.phone_status, null, 2);
+      document.getElementById('btn-swap').style.display = '';
+      toast('🎉 5566253065 CONNECTED — listo para activar', 'success');
+    } else {
+      const err = r.error?.error_user_msg || r.error?.message || JSON.stringify(r.error);
+      out.innerHTML = '<span style="color:var(--orange)">⚠️ Meta dice:</span>\n' + err + '\n\n<span style="color:var(--text-2)">' + (r.suggestion || '') + '</span>';
+      toast('Meta a\xfan no libera el n\xfamero — reintenta en 1-2h', 'error');
+    }
+  } catch(e){
+    out.innerHTML = '<span style="color:var(--red)">Error: ' + e.message + '</span>';
+  } finally {
+    btn.disabled = false; btn.textContent = '↻ Reintentar registro';
+  }
+}
+
+async function checkPhoneStatus(){
+  const out = document.getElementById('retry-result');
+  out.style.display = 'block';
+  out.textContent = 'Verificando…';
+  try {
+    // Re-uses the same endpoint which checks status first
+    const r = await api('wa-register-retry');
+    out.innerHTML = '<strong>Status actual:</strong>\n' + JSON.stringify(r.phone_status || r, null, 2);
+  } catch(e){ out.textContent = 'Error: ' + e.message; }
+}
+
+async function swapToReal(){
+  if (!confirm('Esto cambia WA_PHONE_NUMBER_ID en Vercel al n\xfamero real 5566253065 (1058413820699577). El bot pasar\xe1 a operar ese n\xfamero en ~30 seg. ¿Continuar?')) return;
+  alert('Este swap lo tengo que hacer yo desde la terminal (vercel env). Av\xedsame por chat y lo dejo listo en 30 seg.');
 }
 
 async function wipeAll(){
