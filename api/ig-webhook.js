@@ -258,12 +258,15 @@ async function upsertIgLead(igUserId, firstMessage) {
 
   if (sel.data) return { lead: sel.data, isNew: false };
 
-  // Try to fetch IG profile info (username, name)
+  // Fetch IG profile info via new IG API
   let profileName = null;
   try {
-    const r = await fetch(`https://graph.facebook.com/v21.0/${igUserId}?fields=name,username&access_token=${process.env.WA_ACCESS_TOKEN}`);
-    const p = await r.json();
-    profileName = p.name || p.username || null;
+    const igToken = process.env.IG_ACCESS_TOKEN;
+    if (igToken) {
+      const r = await fetch(`https://graph.instagram.com/v21.0/${igUserId}?fields=name,username&access_token=${igToken}`);
+      const p = await r.json();
+      profileName = p.name || p.username || null;
+    }
   } catch (e) { /* ignore */ }
 
   const insertPayload = {
@@ -353,26 +356,20 @@ ${channelHint}
 // SEND IG MESSAGE via Graph API
 // ─────────────────────────────────────────────────────────
 async function sendIgMessage(recipientId, text) {
-  // Token specific para IG (preferred). Fallback al WA system user token si IG_ACCESS_TOKEN no está configurado.
-  const accessToken = process.env.IG_ACCESS_TOKEN || process.env.WA_ACCESS_TOKEN;
+  // "Instagram API with Instagram Login" (nueva 2024): IG_ACCESS_TOKEN dedicado
+  // Endpoint: https://graph.instagram.com/v21.0/me/messages (NO graph.facebook.com)
+  const accessToken = process.env.IG_ACCESS_TOKEN;
   if (!accessToken) {
-    console.error('[IG send] no access token configured');
+    console.error('[IG send] IG_ACCESS_TOKEN missing');
     return;
   }
-  // La nueva "Instagram API with Instagram Login" usa endpoint /me/messages con el token IG
-  // Si usamos el viejo flow (Facebook Login + Page), usaríamos /{IG_PAGE_ID}/messages
-  const pageId = process.env.IG_PAGE_ID;
-  const url = pageId
-    ? `https://graph.facebook.com/v21.0/${pageId}/messages`
-    : `https://graph.instagram.com/v21.0/me/messages`;
-
+  const url = `https://graph.instagram.com/v21.0/me/messages`;
   const resp = await fetch(url, {
     method: 'POST',
     headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       recipient: { id: recipientId },
       message: { text },
-      messaging_type: 'RESPONSE',
     }),
   });
   const respText = await resp.text();
@@ -380,6 +377,7 @@ async function sendIgMessage(recipientId, text) {
     console.error('[IG send] failed:', resp.status, respText);
     return { error: true, body: respText };
   }
+  console.log('[IG send] success →', recipientId);
   try { return JSON.parse(respText); } catch (e) { return { raw: respText }; }
 }
 
