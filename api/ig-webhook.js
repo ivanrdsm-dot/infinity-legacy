@@ -312,15 +312,33 @@ async function processIgEvent(event, entry) {
 // caemos a `wa_phone` con prefijo 'ig:'.
 // ─────────────────────────────────────────────────────────
 async function upsertIgLead(igUserId, firstMessage) {
-  // Try ig_user_id column first (new schema)
+  // Try BOTH lookup strategies (covers leads created before/after schema migration)
+  // 1. By ig_user_id (new schema)
   let sel = await getSupabase()
     .from('leads')
     .select('*')
     .eq('ig_user_id', igUserId)
     .maybeSingle();
 
+  // 2. If no error and no data, try fallback by wa_phone with prefix
+  if (!sel.error && !sel.data) {
+    sel = await getSupabase()
+      .from('leads')
+      .select('*')
+      .eq('wa_phone', 'ig:' + igUserId)
+      .maybeSingle();
+    // Backfill ig_user_id on the existing lead if found
+    if (sel.data && !sel.data.ig_user_id) {
+      try {
+        await getSupabase().from('leads').update({ ig_user_id: igUserId, channel: 'instagram' }).eq('id', sel.data.id);
+        sel.data.ig_user_id = igUserId;
+        sel.data.channel = 'instagram';
+      } catch (_) { /* ignore */ }
+    }
+  }
+
+  // 3. If first query errored (column missing on old schema), fall back too
   if (sel.error && (sel.error.code === '42703' || /column .* does not exist/i.test(sel.error.message) || /could not find the .* column/i.test(sel.error.message))) {
-    // Column doesn't exist → fall back to wa_phone with prefix
     sel = await getSupabase().from('leads').select('*').eq('wa_phone', 'ig:' + igUserId).maybeSingle();
   }
 
