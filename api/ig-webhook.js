@@ -100,27 +100,52 @@ export default async function handler(req, res) {
   try { parsedBody = JSON.parse(rawBody); }
   catch (e) { return res.status(400).send('Invalid JSON'); }
 
-  // Meta IG webhook formats:
-  // object: "instagram" or "page" depending on event source
+  // 🔍 DEBUG: log full payload to understand the new Instagram API format
+  console.log('[IG] Webhook payload:', JSON.stringify(parsedBody).substring(0, 2000));
+  console.log('[IG] object field:', parsedBody?.object);
+  console.log('[IG] entry count:', parsedBody?.entry?.length || 0);
+
   const object = parsedBody?.object;
-  if (object !== 'instagram' && object !== 'page') {
-    return res.status(200).send('OK'); // not for us, ignore
+  // Nueva "Instagram API with Instagram Login" puede usar otros object names
+  // Lo aceptamos todos por ahora y filtramos solo lo que NO es Instagram/Messenger
+  const acceptedObjects = ['instagram', 'page', 'whatsapp_business_account'];
+  if (object && !acceptedObjects.includes(object)) {
+    console.log('[IG] Unknown object, skipping:', object);
+    return res.status(200).send('OK');
   }
 
   try {
     const entries = parsedBody.entry || [];
     for (const entry of entries) {
-      // IG DMs llegan en entry.messaging (no entry.changes)
+      console.log('[IG] entry keys:', Object.keys(entry));
+
+      // Formato 1: entry.messaging (Messenger + IG via FB Login antiguo)
       const messaging = entry.messaging || [];
       for (const event of messaging) {
+        console.log('[IG] messaging event:', JSON.stringify(event).substring(0, 500));
         await processIgEvent(event, entry);
       }
-      // Some IG events come as changes (e.g., comments, mentions)
+
+      // Formato 2: entry.changes (algunos eventos IG)
       const changes = entry.changes || [];
       for (const change of changes) {
-        if (change.field === 'messages') {
-          const msgs = change.value?.messages || [];
-          for (const m of msgs) await processIgEvent(m, entry);
+        console.log('[IG] change field:', change.field, 'value keys:', Object.keys(change.value || {}));
+        if (change.field === 'messages' || change.field === 'messaging_postbacks') {
+          // value puede ser un solo evento o array
+          if (change.value?.messages) {
+            for (const m of change.value.messages) await processIgEvent(m, entry);
+          } else if (Array.isArray(change.value)) {
+            for (const v of change.value) await processIgEvent(v, entry);
+          } else if (change.value) {
+            // Adaptar al formato { sender, recipient, message } si viene anidado
+            const synth = {
+              sender: { id: change.value.from?.id || change.value.sender_id },
+              recipient: { id: change.value.to?.id || change.value.recipient_id },
+              message: { text: change.value.text || change.value.message?.text, mid: change.value.id },
+              timestamp: change.value.timestamp,
+            };
+            await processIgEvent(synth, entry);
+          }
         }
       }
     }
