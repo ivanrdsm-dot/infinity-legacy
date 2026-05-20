@@ -19,14 +19,15 @@ export default async function handler(req, res) {
   const token = (req.query.t || '').trim();
   if (token !== process.env.DASHBOARD_TOKEN) return res.status(401).json({ error: 'Unauthorized' });
 
-  const { data, error } = await getSupabase()
-    .from('system_state')
-    .select('value, updated_at')
-    .eq('key', 'last_ig_webhook')
-    .maybeSingle();
+  // Return BOTH the raw last webhook AND the processing steps
+  const [hookRes, procRes] = await Promise.all([
+    getSupabase().from('system_state').select('value, updated_at').eq('key', 'last_ig_webhook').maybeSingle(),
+    getSupabase().from('system_state').select('value, updated_at').eq('key', 'last_ig_processing').maybeSingle(),
+  ]);
 
-  if (error) return res.status(500).json({ error: error.message });
-  if (!data) return res.status(200).json({ ok: true, message: 'No webhook received yet', value: null });
-
-  return res.status(200).json({ ok: true, ...data });
+  return res.status(200).json({
+    ok: true,
+    last_webhook: hookRes.data || null,
+    last_processing: procRes.data || null,
+  });
 }

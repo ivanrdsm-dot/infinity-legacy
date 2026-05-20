@@ -127,16 +127,29 @@ export default async function handler(req, res) {
     return res.status(200).send('OK');
   }
 
+  // Wrap processing in robust try/catch + persist each step to Supabase
+  const steps = [];
+  const logStep = (name, data) => {
+    steps.push({ step: name, data, at: new Date().toISOString() });
+  };
+
   try {
     const entries = parsedBody.entry || [];
+    logStep('entries_count', entries.length);
     for (const entry of entries) {
-      console.warn('[IG-DBG] entry keys:', Object.keys(entry));
+      logStep('entry_processing', { id: entry.id, keys: Object.keys(entry) });
 
-      // Formato 1: entry.messaging (Messenger + IG via FB Login antiguo)
+      // Formato 1: entry.messaging
       const messaging = entry.messaging || [];
+      logStep('messaging_count', messaging.length);
       for (const event of messaging) {
-        console.log('[IG] messaging event:', JSON.stringify(event).substring(0, 500));
-        await processIgEvent(event, entry);
+        try {
+          logStep('processIgEvent_start', { sender: event.sender?.id, text: event.message?.text?.substring(0, 50) });
+          await processIgEvent(event, entry);
+          logStep('processIgEvent_done', { sender: event.sender?.id });
+        } catch (e) {
+          logStep('processIgEvent_ERROR', { error: e.message, stack: (e.stack || '').substring(0, 500) });
+        }
       }
 
       // Formato 2: entry.changes (algunos eventos IG)
@@ -162,10 +175,24 @@ export default async function handler(req, res) {
         }
       }
     }
+    // Save the full step log to Supabase for debugging
+    try {
+      await getSupabase().from('system_state').upsert({
+        key: 'last_ig_processing',
+        value: { steps, completed_at: new Date().toISOString() },
+      });
+    } catch (_) {}
     return res.status(200).send('OK');
   } catch (e) {
+    logStep('handler_FATAL', { error: e.message, stack: (e.stack || '').substring(0, 500) });
+    try {
+      await getSupabase().from('system_state').upsert({
+        key: 'last_ig_processing',
+        value: { steps, fatal_error: e.message, at: new Date().toISOString() },
+      });
+    } catch (_) {}
     console.error('[IG] Handler error:', e.message, e.stack);
-    return res.status(200).send('OK'); // Always 200 — Meta penalizes errors
+    return res.status(200).send('OK');
   }
 }
 
