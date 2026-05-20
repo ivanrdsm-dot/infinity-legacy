@@ -101,9 +101,9 @@ export default async function handler(req, res) {
   catch (e) { return res.status(400).send('Invalid JSON'); }
 
   // 🔍 DEBUG: log full payload to understand the new Instagram API format
-  console.log('[IG] Webhook payload:', JSON.stringify(parsedBody).substring(0, 2000));
-  console.log('[IG] object field:', parsedBody?.object);
-  console.log('[IG] entry count:', parsedBody?.entry?.length || 0);
+  console.warn('[IG-DBG] Webhook payload:', JSON.stringify(parsedBody).substring(0, 2000));
+  console.warn('[IG-DBG] object field:', parsedBody?.object);
+  console.warn('[IG-DBG] entry count:', parsedBody?.entry?.length || 0);
 
   const object = parsedBody?.object;
   // Nueva "Instagram API with Instagram Login" puede usar otros object names
@@ -117,7 +117,7 @@ export default async function handler(req, res) {
   try {
     const entries = parsedBody.entry || [];
     for (const entry of entries) {
-      console.log('[IG] entry keys:', Object.keys(entry));
+      console.warn('[IG-DBG] entry keys:', Object.keys(entry));
 
       // Formato 1: entry.messaging (Messenger + IG via FB Login antiguo)
       const messaging = entry.messaging || [];
