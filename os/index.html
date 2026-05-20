@@ -585,15 +585,18 @@ async function renderInbox(el, opts={}){
     <div style="max-height:calc(100vh - 220px);overflow-y:auto">
     ${leads.map(l => `
       <div style="display:flex;padding:14px 18px;border-bottom:1px solid var(--border-1);gap:14px;cursor:pointer;transition:background .1s" onmouseover="this.style.background='var(--bg-3)'" onmouseout="this.style.background=''" onclick="window.open('/wa-dashboard.html?t=${encodeURIComponent(TOKEN)}#${l.id}','_blank')">
-        <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--gold-dark),var(--gold));display:grid;place-items:center;font-weight:600;color:var(--bg-0);flex-shrink:0">${(l.name||l.wa_phone||'?').substring(0,2).toUpperCase()}</div>
+        <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,${l.channel==='instagram'?'#E1306C,#833AB4':'var(--gold-dark),var(--gold)'});display:grid;place-items:center;font-weight:600;color:#fff;flex-shrink:0">${(l.name||l.wa_phone||'?').substring(0,2).toUpperCase()}</div>
         <div style="flex:1;min-width:0">
-          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;align-items:center">
             <strong style="font-size:13px">${escapeHtml(l.name || l.wa_phone)}</strong>
-            <span style="font-size:11px;color:var(--text-3)">${timeAgo(l.last_message_at)}</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:${l.channel==='instagram'?'rgba(225,48,108,.14)':'rgba(37,211,102,.14)'};color:${l.channel==='instagram'?'#E1306C':'#25D366'};font-weight:600">${l.channel==='instagram'?'📷 IG':'💬 WA'}</span>
+              <span style="font-size:11px;color:var(--text-3)">${timeAgo(l.last_message_at)}</span>
+            </div>
           </div>
           <div style="font-size:12px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px">${escapeHtml(l.last_message_body || '(sin mensajes)')}</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <span style="font-size:10px;padding:2px 8px;border-radius:50px;background:var(--gold-soft, rgba(199,167,108,.14));color:var(--gold);font-weight:600">${l.stage||'INITIAL'}</span>
+            <span style="font-size:10px;padding:2px 8px;border-radius:50px;background:rgba(199,167,108,.14);color:var(--gold);font-weight:600">${l.stage||'INITIAL'}</span>
             ${l.matched_plan ? `<span style="font-size:10px;padding:2px 8px;border-radius:50px;background:var(--purple-soft);color:var(--purple);font-weight:600">${l.matched_plan}</span>` : ''}
             ${l.priority==='urgent' ? `<span style="font-size:10px;padding:2px 8px;border-radius:50px;background:var(--red-soft);color:var(--red);font-weight:600">🚨 URGENT</span>` : ''}
             ${l.bot_paused ? `<span style="font-size:10px;padding:2px 8px;border-radius:50px;background:var(--orange-soft);color:var(--orange);font-weight:600">⏸ Manual</span>` : ''}
@@ -783,8 +786,8 @@ async function renderSettings(el){
           </div>
           <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg-1);border-radius:8px">
             <span style="font-size:18px">📷</span>
-            <div style="flex:1"><strong>Instagram Business Messaging</strong><div style="font-size:11px;color:var(--text-3)">@infinitylegacy.of · pendiente fase 2</div></div>
-            <span style="font-size:10px;padding:3px 9px;border-radius:50px;background:var(--text-3);color:var(--bg-0);font-weight:600">PENDIENTE</span>
+            <div style="flex:1"><strong>Instagram Business Messaging</strong><div style="font-size:11px;color:var(--text-3)">@infinitylegacy.of · webhook listo, falta agregar producto Instagram a la App</div></div>
+            <span style="font-size:10px;padding:3px 9px;border-radius:50px;background:var(--orange-soft);color:var(--orange);font-weight:600">SETUP 80%</span>
           </div>
           <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg-1);border-radius:8px">
             <span style="font-size:18px">🤖</span>
