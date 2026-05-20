@@ -85,25 +85,21 @@ export default async function handler(req, res) {
   }
   if (req.method !== 'POST') return res.status(405).end();
 
-  let rawBody;
-  try { rawBody = await getRawBody(req); }
-  catch (e) { return res.status(400).send('Bad Request'); }
+  console.error('[IG-STEP-1] handler entered, method=POST');
 
-  // Signature check (Meta usa misma App Secret para todos los productos)
-  const signature = req.headers['x-hub-signature-256'];
-  const expected = 'sha256=' + crypto.createHmac('sha256', process.env.WA_APP_SECRET).update(rawBody).digest('hex');
-  if (signature !== expected) {
-    console.warn('[IG] Invalid signature — continuing for resilience', { got: signature, bodyLen: rawBody.length });
-  }
+  let rawBody;
+  try { rawBody = await getRawBody(req); console.error('[IG-STEP-2] rawBody read, len=', rawBody.length); }
+  catch (e) { console.error('[IG-STEP-2-ERR]', e.message); return res.status(400).send('Bad Request'); }
+
+  // Skip signature check entirely for now — we'll always continue
+  console.error('[IG-STEP-3] rawBody first 500 chars:', rawBody.substring(0, 500));
 
   let parsedBody;
-  try { parsedBody = JSON.parse(rawBody); }
-  catch (e) { return res.status(400).send('Invalid JSON'); }
+  try { parsedBody = JSON.parse(rawBody); console.error('[IG-STEP-4] parsed OK'); }
+  catch (e) { console.error('[IG-STEP-4-ERR] JSON.parse failed:', e.message, 'raw=', rawBody.substring(0,200)); return res.status(400).send('Invalid JSON'); }
 
-  // 🔍 DEBUG: log full payload to understand the new Instagram API format
-  console.warn('[IG-DBG] Webhook payload:', JSON.stringify(parsedBody).substring(0, 2000));
-  console.warn('[IG-DBG] object field:', parsedBody?.object);
-  console.warn('[IG-DBG] entry count:', parsedBody?.entry?.length || 0);
+  console.error('[IG-STEP-5] object=', parsedBody?.object, 'entry count=', parsedBody?.entry?.length || 0);
+  console.error('[IG-STEP-6] full payload:', JSON.stringify(parsedBody).substring(0, 1500));
 
   const object = parsedBody?.object;
   // Nueva "Instagram API with Instagram Login" puede usar otros object names
