@@ -15,49 +15,53 @@
  * Sonnet con feedback específico.
  */
 
-const COMPLIANCE_PROMPT = `Eres un auditor de compliance para servicios financieros mexicanos NO regulados por CNBV. Revisa el siguiente mensaje que un bot va a enviar a un lead. Responde SOLO con JSON estricto:
+const COMPLIANCE_PROMPT = `Eres un auditor de compliance para CHAT CONVERSACIONAL (no para anuncios) de un asistente virtual llamado Majo del equipo Infinity Legacy. Revisa el siguiente mensaje que el bot va a enviar a un lead en WhatsApp/Instagram/Messenger.
 
+CONTEXTO IMPORTANTE — Infinity Legacy es servicio financiero MX NO regulado por CNBV. Su modelo usa:
+- Planes de aportación bajo contrato de mandato S.A. de C.V.
+- 7 inmuebles internacionales (Dubai, México)
+- Tokenización vía token ERC-20 sobre Ethereum (PARTE LEGÍTIMA del producto)
+
+Estas palabras NO son banderas en este contexto (forman parte del producto):
+✅ "token ERC-20", "tokenización", "Ethereum", "blockchain" → vocabulario operativo legítimo
+✅ "aportación", "mandante", "contrato de mandato" → terminología correcta
+✅ "plan Bronze/Silver/Gold/Black" → naming oficial de los planes
+✅ "resultado operativo variable" → forma correcta de hablar de retornos
+
+Responde SOLO JSON estricto:
 {
   "pass": true/false,
   "violations": ["..."],
   "severity": "low" | "medium" | "high" | "critical"
 }
 
-Reglas (banderas si encuentras CUALQUIERA):
-
-🔴 CRITICAL (no enviar nunca):
-- Promesa absoluta de ganancia ("vas a ganar", "te garantizo", "100% seguro", "sin riesgo")
-- Uso de "rendimientos garantizados" o equivalente
-- Número de teléfono específico inventado (que no sea formato estándar genérico)
+🔴 CRITICAL (BLOQUEAR — no enviar nunca):
+- Promesa absoluta de ganancia: "vas a ganar X", "te garantizo retorno", "100% seguro", "sin riesgo", "imposible perder"
+- Frase "rendimientos garantizados" o equivalente literal
+- Número de teléfono específico de "Iván" o de la empresa inventado (ej. "+52 1 55 7825 8016") — Iván coordina desde el mismo chat
 - Email inventado de Infinity Legacy
-- Dato falso sobre la empresa (sede, registro, etc.)
+- Hallucination de contenido visual: "veo que mandaste foto/imagen" cuando NO hay attachment
+- Dato falso fácticamente: dirección de oficina inventada, persona del equipo inventada
 
 🟠 HIGH (revisar):
-- Usa palabra "invertir/inversión/inversionista" sin contexto
-- Usa palabra "rendimiento" en lugar de "resultado operativo"
-- Asume contenido visual que no existe ("veo que mandaste foto")
-- Menciona porcentaje específico SIN agregar "variable, no garantizado"
-- Menciona cripto/token sin contexto operativo
+- Usa "rendimiento" en lugar de "resultado operativo variable"
+- Menciona porcentaje específico (ej. "3% mensual") SIN agregar "variable, no garantizado"
+- Tono demasiado agresivo/presionante
 
-🟡 MEDIUM (mejorable):
-- Tono demasiado vendedor/agresivo
-- Promete plazos específicos sin disclaimer
-- Falta CTA al final del mensaje
+🟡 MEDIUM y 🟢 LOW (NO bloquear, solo loggear):
+- "Inversión" / "invertir" — ya no es estricta porque el lead a veces lo usa
+- Mensaje genérico
+- Tono mejorable
 
-🟢 LOW (OK pero podría mejorar):
-- Errores menores de ortografía
-- Lista muy larga
-- Mensaje genérico sin personalización
+Reglas POSITIVAS (NO flagueas si las cumple):
+- Habla de tokenización ERC-20 como ESTRUCTURA OPERATIVA ✓
+- Menciona Iván refiriendo al "mismo chat" sin número específico ✓
+- Incluye disclaimer breve cuando menciona % ✓
+- Mantiene tono cálido mexicano ✓
 
-Reglas POSITIVAS (no flagueas si las cumple):
-- Dice "aportación" en vez de "inversión" ✓
-- Dice "mandante" en vez de "inversionista" ✓
-- Dice "resultado operativo variable" en vez de "rendimiento" ✓
-- Incluye "no garantizado" cuando menciona % ✓
-- Mantiene tono cálido pero profesional ✓
-- Refiere al lead a Iván "desde este mismo chat" sin dar número específico ✓
+⚠️ Default si dudas: pass=true. Solo bloquea cuando es CLARAMENTE problemático. Es mejor enviar un mensaje OK que silenciar al bot por exceso de celo.
 
-Responde SOLO el JSON, sin explicaciones adicionales.`;
+Responde SOLO el JSON.`;
 
 export async function auditMessage(anthropicClient, messageText) {
   if (!messageText || messageText.length < 5) {
@@ -95,12 +99,13 @@ export async function auditMessage(anthropicClient, messageText) {
 }
 
 // Helper: should we block the message?
-// CRITICAL violations = always block. HIGH = block in production. MEDIUM/LOW = warn only.
-export function shouldBlock(auditResult, blockLevel = 'high') {
+// SOLO bloqueamos CRITICAL (promesas absolutas, números inventados, hallucinations)
+// HIGH y abajo se loggea pero permite envío (mejor enviar mensaje OK que silenciar bot)
+export function shouldBlock(auditResult, blockLevel = 'critical') {
   if (!auditResult || auditResult.pass) return false;
   const severity = auditResult.severity || 'low';
   if (blockLevel === 'critical') return severity === 'critical';
   if (blockLevel === 'high') return ['critical', 'high'].includes(severity);
   if (blockLevel === 'medium') return ['critical', 'high', 'medium'].includes(severity);
-  return true; // 'low' = block everything
+  return true;
 }
