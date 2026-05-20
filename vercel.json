@@ -23,6 +23,7 @@
     }
   },
   "crons": [
-    { "path": "/api/wa-cron-followup", "schedule": "*/5 * * * *" }
+    { "path": "/api/wa-cron-followup", "schedule": "*/5 * * * *" },
+    { "path": "/api/wa-meta-verify-check", "schedule": "0 */6 * * *" }
   ]
 }

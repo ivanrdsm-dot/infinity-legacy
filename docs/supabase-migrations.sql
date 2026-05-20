@@ -21,8 +21,19 @@ ALTER TABLE messages
 
 CREATE INDEX IF NOT EXISTS idx_messages_channel ON messages(channel);
 
+-- ─── 2026-05-19 · system_state table para tracking del Meta verify check ───
+-- Tabla muy simple para guardar el último estado conocido del Business
+-- Verification, y la última vez que se notificó a Iván.
+
+CREATE TABLE IF NOT EXISTS system_state (
+  key TEXT PRIMARY KEY,
+  value JSONB,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ─── Verificación ─────────────────────────────────────────────
 -- Ejecuta esto para confirmar que las columnas existen:
 -- SELECT column_name, data_type FROM information_schema.columns
 --   WHERE table_name IN ('leads','messages')
 --   AND column_name IN ('channel','ig_user_id','funnel_stage');
+-- SELECT * FROM system_state;
