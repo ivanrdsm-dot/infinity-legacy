@@ -75,7 +75,7 @@ export default async function handler(req, res) {
         // Vista no existe → query a leads + último mensaje
         const leadsRes = await supabase
           .from('leads')
-          .select('id, wa_phone, wa_name, stage, source, campaign, lead_score, matched_plan, bot_paused, last_message_at, message_count, created_at, priority, channel, ig_user_id')
+          .select('id, wa_phone, wa_name, stage, source, campaign, lead_score, matched_plan, bot_paused, last_message_at, message_count, created_at, priority, channel, ig_user_id, email, lead_phone, full_name')
           .order('last_message_at', { ascending: false, nullsFirst: false })
           .limit(200);
         // Pull last message body per lead

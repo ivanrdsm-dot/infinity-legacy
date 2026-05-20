@@ -21,6 +21,17 @@ ALTER TABLE messages
 
 CREATE INDEX IF NOT EXISTS idx_messages_channel ON messages(channel);
 
+-- ─── 2026-05-20 · Captura de datos de leads ─────────────────────────────
+-- Columnas para guardar nombre completo, email y teléfono extraído de la
+-- conversación, además de los del perfil WhatsApp/Instagram.
+
+ALTER TABLE leads
+  ADD COLUMN IF NOT EXISTS email TEXT,
+  ADD COLUMN IF NOT EXISTS lead_phone TEXT,
+  ADD COLUMN IF NOT EXISTS full_name TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email) WHERE email IS NOT NULL;
+
 -- ─── 2026-05-19 · system_state table para tracking del Meta verify check ───
 -- Tabla muy simple para guardar el último estado conocido del Business
 -- Verification, y la última vez que se notificó a Iván.

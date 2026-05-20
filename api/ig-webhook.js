@@ -247,6 +247,9 @@ async function processIgEvent(event, entry) {
     channel: 'instagram',
   });
 
+  // 2.5 EXTRACT DATA from message + persist (email, phone, intent signals)
+  await extractAndPersistLeadData(lead, messageText);
+
   // 3. Cancel pending follow-ups
   await getSupabase().from('follow_ups')
     .update({ status: 'cancelled', cancelled_at: new Date().toISOString(), cancelled_reason: 'lead_responded' })
@@ -415,6 +418,121 @@ ${channelHint}
 
   console.log(`[IG] Claude cost: $${cost_usd.toFixed(5)}`);
   return { text, tokens_in: u.input_tokens || 0, tokens_out: u.output_tokens || 0, cost_usd };
+}
+
+// ─────────────────────────────────────────────────────────
+// EXTRACT LEAD DATA from message text (email, phone, name, intent)
+// + Notify Iván vía WhatsApp cuando lead esté HOT
+// ─────────────────────────────────────────────────────────
+const EMAIL_RX = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/;
+const PHONE_RX_MX = /\b(?:\+?52\s?1?\s?)?\(?(\d{2,3})\)?[\s.-]?(\d{3,4})[\s.-]?(\d{4})\b/;
+const HIGH_INTENT_RX = /\b(ya\s*(quiero|estoy\s*listo|firmo|firma|me\s*decid)|vamos|agend[ae]mos|cuando\s*nos?\s*ve|me\s*interesa\s*mucho|s[íi]\s*claro\s*agend|listo\s*para\s*firma|cu[áa]ndo\s*podemos\s*hablar|qu[ée]\s*sigue|cu[áa]nto\s*es\s*el\s*m[íi]nimo|cu[áa]l\s*es\s*la\s*cuenta)/i;
+
+async function extractAndPersistLeadData(lead, text) {
+  if (!text) return;
+  const updates = {};
+  const signals = [];
+
+  // 1. Email
+  const emailMatch = text.match(EMAIL_RX);
+  if (emailMatch && !lead.email) {
+    updates.email = emailMatch[0].toLowerCase();
+    signals.push(`📧 email: ${updates.email}`);
+  }
+
+  // 2. Phone (MX)
+  const phoneMatch = text.match(PHONE_RX_MX);
+  if (phoneMatch) {
+    const digits = (phoneMatch[1] + phoneMatch[2] + phoneMatch[3]).replace(/\D/g, '');
+    if (digits.length >= 10) {
+      const fullPhone = digits.length === 10 ? '52' + digits : digits;
+      if (fullPhone !== lead.wa_phone && !lead.lead_phone) {
+        updates.lead_phone = fullPhone;
+        signals.push(`📱 phone: +${fullPhone}`);
+      }
+    }
+  }
+
+  // 3. High intent signals
+  if (HIGH_INTENT_RX.test(text)) {
+    signals.push(`🔥 HIGH INTENT: "${text.substring(0, 80)}"`);
+    updates.priority = 'urgent';
+  }
+
+  // 4. Apply updates to lead
+  if (Object.keys(updates).length > 0) {
+    let r = await getSupabase().from('leads').update(updates).eq('id', lead.id);
+    // Defensive fallback if columns don't exist
+    if (r.error && (/column .* does not exist/i.test(r.error.message) || /could not find the .* column/i.test(r.error.message))) {
+      const stripped = { ...updates };
+      delete stripped.email;
+      delete stripped.lead_phone;
+      if (Object.keys(stripped).length > 0) {
+        await getSupabase().from('leads').update(stripped).eq('id', lead.id);
+      }
+    }
+    // Merge into lead obj for downstream usage
+    Object.assign(lead, updates);
+  }
+
+  // 5. Check if lead has reached "qualified" threshold and notify Iván
+  await maybeNotifyIvan(lead, signals);
+}
+
+const NOTIFY_NUMBER = '525646665718'; // Iván personal
+
+async function maybeNotifyIvan(lead, signals) {
+  // Notify if: has at least email OR is high intent OR has explicit signals
+  const shouldNotify = signals.length > 0;
+  if (!shouldNotify) return;
+
+  // Anti-spam: only notify once per lead per hour
+  const lastKey = `notify_${lead.id}`;
+  const { data: prevNotify } = await getSupabase()
+    .from('system_state').select('value').eq('key', lastKey).maybeSingle();
+  const lastAt = prevNotify?.value?.last_notified_at;
+  if (lastAt && (Date.now() - new Date(lastAt).getTime() < 3600 * 1000)) {
+    return; // notified within last hour
+  }
+
+  // Build message
+  const channelEmoji = lead.channel === 'instagram' ? '📷 IG' : '💬 WA';
+  const lines = [
+    `🚨 LEAD ${lead.priority === 'urgent' ? 'CALIENTE' : 'NUEVA SEÑAL'}`,
+    `${channelEmoji} ${lead.wa_name || 'Sin nombre'} (${lead.wa_phone})`,
+    `Stage: ${lead.stage} · ${lead.message_count || 0} msgs`,
+    ``,
+    ...signals.map(s => `• ${s}`),
+    ``,
+    `Lead ID: ${lead.id.substring(0, 8)}…`,
+    `Abrir en OS: https://www.infinitylegacy.io/os/#inbox`,
+  ];
+  const message = lines.join('\n');
+
+  // Send via WhatsApp using the test number (or whichever is configured)
+  try {
+    await fetch(`https://graph.facebook.com/v21.0/${process.env.WA_PHONE_NUMBER_ID}/messages`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: NOTIFY_NUMBER,
+        type: 'text',
+        text: { body: message },
+      }),
+    });
+    // Record notification
+    await getSupabase().from('system_state').upsert({
+      key: lastKey,
+      value: { last_notified_at: new Date().toISOString(), signals },
+    });
+    console.log(`[IG] Notified Iván about lead ${lead.id}`);
+  } catch (e) {
+    console.error('[IG] Notify Iván failed:', e.message);
+  }
 }
 
 // ─────────────────────────────────────────────────────────

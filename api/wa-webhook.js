@@ -247,6 +247,10 @@ async function processInboundMessage(msg, contact) {
     il_ref: parseIlRefRaw(text),
   });
 
+  // 3.5 EXTRACT DATA from message + persist (email, phone, intent signals)
+  // + notify Iván if hot signals detected
+  await extractAndPersistLeadData(lead, text);
+
   // 4. Cancelar follow-ups pendientes (el lead ya respondió)
   await getSupabase().from('follow_ups')
     .update({ status: 'cancelled', cancelled_at: new Date().toISOString(), cancelled_reason: 'lead_responded' })
@@ -663,6 +667,92 @@ async function handleIvanCommand(text) {
 
     default:
       return reply(`❌ Comando desconocido: ${cmd}. Escribe /ayuda para ver comandos.`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// EXTRACT LEAD DATA (email, phone, intent) from inbound text
+// + notify Iván cuando lead esté HOT (anti-spam: max 1/hora)
+// ─────────────────────────────────────────────────────────
+const EMAIL_RX = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/;
+const PHONE_RX_MX = /\b(?:\+?52\s?1?\s?)?\(?(\d{2,3})\)?[\s.-]?(\d{3,4})[\s.-]?(\d{4})\b/;
+const HIGH_INTENT_RX = /\b(ya\s*(quiero|estoy\s*listo|firmo|firma|me\s*decid)|vamos|agend[ae]mos|cuando\s*nos?\s*ve|me\s*interesa\s*mucho|s[íi]\s*claro\s*agend|listo\s*para\s*firma|cu[áa]ndo\s*podemos\s*hablar|qu[ée]\s*sigue|cu[áa]nto\s*es\s*el\s*m[íi]nimo|cu[áa]l\s*es\s*la\s*cuenta)/i;
+const NOTIFY_NUMBER = process.env.IVAN_NOTIFY_NUMBER || '525646665718';
+
+async function extractAndPersistLeadData(lead, text) {
+  if (!text) return;
+  const updates = {};
+  const signals = [];
+
+  const emailMatch = text.match(EMAIL_RX);
+  if (emailMatch && !lead.email) {
+    updates.email = emailMatch[0].toLowerCase();
+    signals.push(`📧 email: ${updates.email}`);
+  }
+
+  const phoneMatch = text.match(PHONE_RX_MX);
+  if (phoneMatch) {
+    const digits = (phoneMatch[1] + phoneMatch[2] + phoneMatch[3]).replace(/\D/g, '');
+    if (digits.length >= 10) {
+      const fullPhone = digits.length === 10 ? '52' + digits : digits;
+      if (fullPhone !== lead.wa_phone && !lead.lead_phone) {
+        updates.lead_phone = fullPhone;
+        signals.push(`📱 phone: +${fullPhone}`);
+      }
+    }
+  }
+
+  if (HIGH_INTENT_RX.test(text)) {
+    signals.push(`🔥 HIGH INTENT: "${text.substring(0, 80)}"`);
+    updates.priority = 'urgent';
+  }
+
+  if (Object.keys(updates).length > 0) {
+    let r = await getSupabase().from('leads').update(updates).eq('id', lead.id);
+    if (r.error && (/column .* does not exist/i.test(r.error.message) || /could not find the .* column/i.test(r.error.message))) {
+      const stripped = { ...updates };
+      delete stripped.email;
+      delete stripped.lead_phone;
+      if (Object.keys(stripped).length > 0) {
+        await getSupabase().from('leads').update(stripped).eq('id', lead.id);
+      }
+    }
+    Object.assign(lead, updates);
+  }
+
+  if (signals.length > 0) {
+    await maybeNotifyIvan(lead, signals);
+  }
+}
+
+async function maybeNotifyIvan(lead, signals) {
+  const lastKey = `notify_${lead.id}`;
+  const { data: prevNotify } = await getSupabase()
+    .from('system_state').select('value').eq('key', lastKey).maybeSingle();
+  const lastAt = prevNotify?.value?.last_notified_at;
+  if (lastAt && (Date.now() - new Date(lastAt).getTime() < 3600 * 1000)) return;
+
+  const channelEmoji = lead.channel === 'instagram' ? '📷 IG' : '💬 WA';
+  const lines = [
+    `🚨 LEAD ${lead.priority === 'urgent' ? 'CALIENTE' : 'NUEVA SEÑAL'}`,
+    `${channelEmoji} ${lead.wa_name || 'Sin nombre'} (+${lead.wa_phone})`,
+    `Stage: ${lead.stage} · ${lead.message_count || 0} msgs`,
+    '',
+    ...signals.map(s => `• ${s}`),
+    '',
+    `Abrir lead: https://www.infinitylegacy.io/os/#inbox`,
+  ];
+  const message = lines.join('\n');
+
+  try {
+    await sendWaMessage(NOTIFY_NUMBER, message);
+    await getSupabase().from('system_state').upsert({
+      key: lastKey,
+      value: { last_notified_at: new Date().toISOString(), signals },
+    });
+    console.log(`[WA] Notified Iván about lead ${lead.id}`);
+  } catch (e) {
+    console.error('[WA] Notify Iván failed:', e.message);
   }
 }
 
