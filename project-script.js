@@ -72,3 +72,25 @@
 document.querySelectorAll('a[href^="#"]').forEach(a=>{
   a.addEventListener('click',e=>{ const t=document.querySelector(a.getAttribute('href')); if(t){e.preventDefault();t.scrollIntoView({behavior:'smooth'});} });
 });
+
+// Contadores animados (500K+, 45 min…) — omite valores no numéricos
+(function(){
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const count = el=>{
+    const m = el.textContent.trim().match(/^([^0-9]*)([\d.,]+)(.*)$/);
+    if(!m) return;
+    const target = parseFloat(m[2].replace(/,/g,''));
+    if(isNaN(target)) return;
+    const pre=m[1], suf=m[3], dur=1500, t0=performance.now();
+    const step=t=>{
+      const p=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-p,4);
+      el.textContent=pre+Math.round(target*e)+suf;
+      if(p<1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  };
+  const io = new IntersectionObserver(es=>{
+    es.forEach(en=>{ if(en.isIntersecting){ io.unobserve(en.target); count(en.target); } });
+  },{threshold:.6});
+  document.querySelectorAll('.ov-num,.ls-n').forEach(el=>io.observe(el));
+})();

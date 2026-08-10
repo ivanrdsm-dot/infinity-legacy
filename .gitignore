@@ -12,3 +12,9 @@ node_modules/
 .vercel/
 *.log
 .vercel
+
+# Config local de Claude Code
+.claude/
+
+# Fotos fuente sin optimizar (WhatsApp)
+images/montevinum/
