@@ -2,6 +2,12 @@
   "version": 2,
   "cleanUrls": true,
   "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/api/:fn(ad-precheck|compose|dashboard|wa-dashboard|wa-register-retry|wa-meta-verify-check)",
+      "destination": "/api/tools?fn=:fn"
+    }
+  ],
   "headers": [
     {
       "source": "/images/(.*)",
@@ -23,7 +29,7 @@
     }
   },
   "crons": [
-    { "path": "/api/wa-cron-followup", "schedule": "*/5 * * * *" },
-    { "path": "/api/wa-meta-verify-check", "schedule": "0 */6 * * *" }
+    { "path": "/api/wa-cron-followup", "schedule": "0 16 * * *" },
+    { "path": "/api/wa-meta-verify-check", "schedule": "0 15 * * *" }
   ]
 }

@@ -31,8 +31,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import fs from 'node:fs';
 import path from 'node:path';
 import ws from 'ws';
-import { recalcAndPersistScore } from './wa-bot/lead-scoring.js';
-import { auditMessage, shouldBlock } from './wa-bot/compliance-audit.js';
+import { recalcAndPersistScore } from '../lib/wa-bot/lead-scoring.js';
+import { auditMessage, shouldBlock } from '../lib/wa-bot/compliance-audit.js';
 
 export const config = { api: { bodyParser: false } };
 
