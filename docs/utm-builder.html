@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Infinity Legacy — UTM Builder Interno</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; background: #F6F1E6; color: #0B0F14; }
+    h1 { font-family: Georgia, serif; color: #A8843D; }
+    label { display: block; margin: 12px 0 4px; font-weight: 600; }
+    input, select { width: 100%; padding: 8px; border: 1px solid #E7DDCB; border-radius: 6px; font-size: 14px; }
+    output { display: block; padding: 16px; background: #1A2030; color: #DFC99A; font-family: monospace; font-size: 13px; border-radius: 8px; margin-top: 20px; word-break: break-all; }
+    button { padding: 10px 20px; background: #C7A76C; color: white; border: 0; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <h1>UTM Builder — Infinity Legacy</h1>
+  <p><strong>Genera URLs UTM consistentes con la convención v1.0.</strong> Solo para uso interno.</p>
+
+  <label>URL base (página de destino):</label>
+  <input id="url" placeholder="https://www.infinitylegacy.io/projects/monte-vinum.html">
+
+  <label>Plataforma:</label>
+  <select id="source">
+    <option value="meta|paid_social">Meta Ads (FB/IG)</option>
+    <option value="google|cpc">Google Search</option>
+    <option value="google|display">Google Display</option>
+    <option value="youtube|paid_social">YouTube Ads</option>
+    <option value="tiktok|paid_social">TikTok Ads</option>
+    <option value="newsletter|email">Email Marketing</option>
+    <option value="instagram|organic_social">Instagram orgánico</option>
+  </select>
+
+  <label>Proyecto:</label>
+  <select id="project">
+    <option>Montevinum</option><option>Azizi</option><option>Kukulkan</option>
+    <option>Hospital</option><option>Citrus</option><option>LuxuryClinics</option><option>TownHouses</option>
+  </select>
+
+  <label>Funnel:</label>
+  <select id="funnel"><option>TOFU</option><option>MOFU</option><option selected>BOFU</option></select>
+
+  <label>Objetivo:</label>
+  <select id="objective"><option>Reach</option><option>Traffic</option><option>Engage</option><option selected>Conv</option><option>LeadGen</option><option>Msg</option></select>
+
+  <label>Geo:</label>
+  <select id="geo"><option>MX</option><option>MX-CDMX</option><option>MX-DiasporaUS</option><option>AE</option></select>
+
+  <label>Mes (YYYY-MM):</label>
+  <input id="date" placeholder="2026-05">
+
+  <label>Audiencia (ej: LAL1pct-WebVisitors):</label>
+  <input id="audience" placeholder="LAL1pct-WebVisitors">
+
+  <label>Edad (ej: 35-55):</label>
+  <input id="age" value="35-55">
+
+  <label>Formato (ej: Reel-15s):</label>
+  <input id="format" placeholder="Reel-15s">
+
+  <label>Hook:</label>
+  <input id="hook" placeholder="AspiracionalDrone">
+
+  <label>CTA:</label>
+  <select id="cta"><option>AgendaConsulta</option><option>VerProyecto</option><option>EnviarMensaje</option><option>QuieroSaberMas</option></select>
+
+  <label>Versión:</label>
+  <input id="version" value="01">
+
+  <button onclick="build()">Generar URL UTM</button>
+
+  <output id="result">—</output>
+  <output id="campaign-name" style="margin-top:8px;background:#3A3F46">—</output>
+
+  <script>
+    function slug(s){ return (s||'').toLowerCase().replace(/\s+/g,'-'); }
+    function build() {
+      const [src, med] = document.getElementById('source').value.split('|');
+      const proj = document.getElementById('project').value;
+      const fun = document.getElementById('funnel').value;
+      const obj = document.getElementById('objective').value;
+      const geo = document.getElementById('geo').value;
+      const date = document.getElementById('date').value;
+      const aud = document.getElementById('audience').value;
+      const age = document.getElementById('age').value;
+      const fmt = document.getElementById('format').value;
+      const hook = document.getElementById('hook').value;
+      const cta = document.getElementById('cta').value;
+      const ver = document.getElementById('version').value.padStart(2, '0');
+
+      const campaign = `IL_${proj}_${fun}_${obj}_${geo}_${date}`;
+      const adset = `${campaign}__${aud}_${age}_Auto`;
+      const ad = `${adset}___${fmt}_${hook}_${cta}_v${ver}`;
+
+      const utm = {
+        utm_source: src,
+        utm_medium: med,
+        utm_campaign: campaign.toLowerCase(),
+        utm_content: `${fmt}_${hook}_${cta}_v${ver}`.toLowerCase(),
+        utm_term: `${aud}_${age}`.toLowerCase()
+      };
+
+      const url = document.getElementById('url').value || 'https://www.infinitylegacy.io/';
+      const params = new URLSearchParams(utm).toString();
+      const final = `${url}${url.includes('?') ? '&' : '?'}${params}`;
+
+      document.getElementById('campaign-name').textContent = `Meta names:\nCampaña:  ${campaign}\nAd Set:    ${adset}\nAnuncio:  ${ad}`;
+      document.getElementById('result').textContent = `URL final del botón:\n\n${final}`;
+    }
+  </script>
+</body>
+</html>

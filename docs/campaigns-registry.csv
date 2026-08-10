@@ -1,0 +1,4 @@
+campaign_id,campaign_name,project,funnel,objective,geo,launch_date,status,daily_budget_mxn,utm_campaign,notes
+,IL_Montevinum_BOFU_Conv_MX_2026-05,Montevinum,BOFU,Conv,MX,2026-05-XX,planned,500,il_montevinum_bofu_conv_mx_2026-05,Smoke test inicial - validar tracking E2E
+,IL_Montevinum_MOFU_Traffic_MX_2026-05,Montevinum,MOFU,Traffic,MX,2026-05-XX,planned,300,il_montevinum_mofu_traffic_mx_2026-05,Educación tokenización + drone aspiracional
+,IL_Montevinum_TOFU_Reach_MX_2026-05,Montevinum,TOFU,Reach,MX,2026-05-XX,planned,200,il_montevinum_tofu_reach_mx_2026-05,Awareness amplio AB+ CDMX/GDL/MTY

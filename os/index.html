@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Infinity OS · Sales Operating System</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#0B0F14" />
+  <link rel="apple-touch-icon" href="/images/logo-gold.webp" />
+  <link rel="manifest" href="/os/manifest.json" />
+  <style>
+    /* ─────────────────────────────────────────────
+       INFINITY OS — Design System
+       Theme: Dark Premium + Gold (Infinity Legacy)
+       Inspired by: Linear, Stripe Dashboard, Vercel
+    ───────────────────────────────────────────── */
+    :root{
+      /* Brand palette */
+      --gold:#C7A76C;
+      --gold-light:#DFC99A;
+      --gold-dark:#A8843D;
+      --gold-glow:rgba(199,167,108,.35);
+
+      /* Surfaces */
+      --bg-0:#08090C;          /* deepest */
+      --bg-1:#0E1117;          /* base */
+      --bg-2:#161A22;          /* card */
+      --bg-3:#1E2330;          /* hover */
+      --bg-4:#262C3B;          /* active */
+
+      /* Borders */
+      --border-1:rgba(255,255,255,.06);
+      --border-2:rgba(255,255,255,.1);
+      --border-gold:rgba(199,167,108,.24);
+
+      /* Text */
+      --text-0:#F6F1E6;        /* primary */
+      --text-1:rgba(246,241,230,.74);
+      --text-2:rgba(246,241,230,.48);
+      --text-3:rgba(246,241,230,.32);
+
+      /* Status */
+      --green:#10B981;
+      --green-soft:rgba(16,185,129,.14);
+      --red:#EF4444;
+      --red-soft:rgba(239,68,68,.14);
+      --orange:#F59E0B;
+      --orange-soft:rgba(245,158,11,.14);
+      --blue:#3B82F6;
+      --blue-soft:rgba(59,130,246,.14);
+      --purple:#8B5CF6;
+      --purple-soft:rgba(139,92,246,.14);
+
+      /* Layout */
+      --sidebar-w:240px;
+      --topbar-h:56px;
+      --radius-sm:6px;
+      --radius:10px;
+      --radius-lg:14px;
+    }
+
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,'Inter','SF Pro Display',system-ui,sans-serif;
+      background:var(--bg-1);
+      color:var(--text-0);
+      font-size:14px;
+      line-height:1.5;
+      overflow:hidden;
+      -webkit-font-smoothing:antialiased;
+    }
+    a{color:inherit;text-decoration:none}
+    button{font-family:inherit;cursor:pointer}
+    input,textarea,select{font-family:inherit}
+    ::-webkit-scrollbar{width:10px;height:10px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:5px}
+    ::-webkit-scrollbar-thumb:hover{background:var(--text-3)}
+
+    /* ─── APP LAYOUT ─── */
+    .app{
+      display:grid;
+      grid-template-columns:var(--sidebar-w) 1fr;
+      grid-template-rows:var(--topbar-h) 1fr;
+      grid-template-areas:
+        "sidebar topbar"
+        "sidebar main";
+      height:100vh;
+    }
+
+    /* ─── SIDEBAR ─── */
+    .sidebar{
+      grid-area:sidebar;
+      background:var(--bg-0);
+      border-right:1px solid var(--border-1);
+      display:flex;flex-direction:column;
+      overflow-y:auto;
+    }
+    .sidebar-brand{
+      padding:18px 18px 14px;
+      border-bottom:1px solid var(--border-1);
+      display:flex;align-items:center;gap:10px;
+    }
+    .sidebar-brand .logo{
+      width:30px;height:30px;border-radius:8px;
+      background:linear-gradient(135deg,var(--gold),var(--gold-dark));
+      display:grid;place-items:center;color:var(--bg-0);font-weight:800;font-size:14px;
+      box-shadow:0 0 16px var(--gold-glow);
+    }
+    .sidebar-brand .name{font-family:Georgia,serif;font-size:15px;color:var(--gold);letter-spacing:.03em}
+    .sidebar-brand .sub{font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:.18em;margin-top:2px}
+
+    .nav-section{padding:14px 12px 6px}
+    .nav-label{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.14em;font-weight:600;padding:0 8px 8px}
+    .nav-item{
+      display:flex;align-items:center;gap:11px;
+      padding:8px 10px;border-radius:var(--radius-sm);
+      color:var(--text-1);font-size:13px;font-weight:500;
+      cursor:pointer;transition:all .12s;
+      margin-bottom:2px;position:relative;
+    }
+    .nav-item:hover{background:var(--bg-2);color:var(--text-0)}
+    .nav-item.active{background:var(--bg-3);color:var(--gold)}
+    .nav-item.active::before{
+      content:'';position:absolute;left:-12px;top:8px;bottom:8px;width:3px;
+      background:var(--gold);border-radius:0 2px 2px 0;
+    }
+    .nav-item .icon{font-size:16px;width:18px;text-align:center}
+    .nav-item .badge{
+      margin-left:auto;background:var(--gold);color:var(--bg-0);
+      font-size:10px;font-weight:700;padding:1px 6px;border-radius:50px;
+      min-width:18px;text-align:center;
+    }
+    .nav-item .badge.alert{background:var(--red);color:#fff}
+
+    .sidebar-footer{
+      margin-top:auto;padding:14px 12px;
+      border-top:1px solid var(--border-1);
+    }
+    .user-chip{
+      display:flex;align-items:center;gap:10px;
+      padding:8px 10px;border-radius:var(--radius-sm);
+      background:var(--bg-2);
+    }
+    .user-avatar{
+      width:28px;height:28px;border-radius:50%;
+      background:linear-gradient(135deg,var(--gold-dark),var(--gold));
+      display:grid;place-items:center;font-weight:700;font-size:12px;color:var(--bg-0);
+    }
+    .user-info{flex:1;min-width:0}
+    .user-name{font-size:12px;color:var(--text-0);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .user-role{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.1em}
+
+    /* ─── TOPBAR ─── */
+    .topbar{
+      grid-area:topbar;
+      background:var(--bg-1);
+      border-bottom:1px solid var(--border-1);
+      display:flex;align-items:center;
+      padding:0 22px;gap:24px;
+    }
+    .topbar-title{font-size:15px;font-weight:600;color:var(--text-0);letter-spacing:.01em}
+    .topbar-meta{display:flex;align-items:center;gap:24px;margin-left:auto}
+    .stat-pill{
+      display:flex;align-items:center;gap:8px;
+      padding:6px 12px;border-radius:50px;
+      background:var(--bg-2);font-size:12px;color:var(--text-1);
+    }
+    .stat-pill strong{color:var(--text-0);font-weight:600}
+    .stat-pill.live::before{
+      content:'';width:7px;height:7px;border-radius:50%;
+      background:var(--green);box-shadow:0 0 8px var(--green);
+      animation:pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+    @keyframes shake{0%,100%{transform:rotate(0)}25%{transform:rotate(-12deg)}75%{transform:rotate(12deg)}}
+    .topbar-action{
+      background:transparent;border:1px solid var(--border-2);
+      color:var(--text-1);padding:7px 14px;border-radius:var(--radius-sm);
+      font-size:12px;font-weight:500;transition:all .12s;
+    }
+    .topbar-action:hover{border-color:var(--gold);color:var(--gold)}
+
+    /* ─── MAIN VIEW ─── */
+    .main{grid-area:main;overflow-y:auto;padding:24px 28px}
+    @media(max-width:880px){
+      .main{padding:16px}
+      .app{grid-template-columns:60px 1fr}
+      .sidebar-brand .name,.sidebar-brand .sub,.nav-item span:not(.icon):not(.badge),.user-info,.nav-label{display:none}
+      .nav-item{justify-content:center}
+    }
+
+    /* ─── COMPONENTS ─── */
+    .card{
+      background:var(--bg-2);border:1px solid var(--border-1);
+      border-radius:var(--radius-lg);padding:20px;
+    }
+    .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+    .card-title{font-size:11px;color:var(--text-2);text-transform:uppercase;letter-spacing:.12em;font-weight:600}
+
+    .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+    .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media(max-width:1100px){.grid-4{grid-template-columns:repeat(2,1fr)}.grid-3{grid-template-columns:1fr}}
+    @media(max-width:700px){.grid-4{grid-template-columns:1fr}.grid-2{grid-template-columns:1fr}}
+
+    .kpi{
+      background:var(--bg-2);border:1px solid var(--border-1);
+      border-radius:var(--radius);padding:16px 18px;
+      transition:all .14s;
+    }
+    .kpi:hover{border-color:var(--border-gold);transform:translateY(-1px)}
+    .kpi .lbl{font-size:10px;color:var(--text-2);text-transform:uppercase;letter-spacing:.13em;font-weight:600}
+    .kpi .val{font-size:1.6rem;font-weight:700;color:var(--text-0);margin-top:6px;line-height:1.1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+    .kpi .val.gold{color:var(--gold)}
+    .kpi .delta{font-size:11px;margin-top:4px;color:var(--text-2);display:flex;align-items:center;gap:3px}
+    .kpi .delta.up{color:var(--green)}
+    .kpi .delta.down{color:var(--red)}
+    .kpi .sub{font-size:11px;color:var(--text-3);margin-top:3px}
+
+    .empty-state{
+      text-align:center;padding:50px 24px;color:var(--text-2);
+    }
+    .empty-state .em{font-size:34px;opacity:.5;margin-bottom:10px}
+    .empty-state .msg{font-size:14px;color:var(--text-1)}
+    .empty-state .hint{font-size:12px;color:var(--text-3);margin-top:6px}
+
+    .loading{
+      display:inline-block;width:14px;height:14px;
+      border:2px solid var(--border-2);border-top-color:var(--gold);
+      border-radius:50%;animation:spin .7s linear infinite;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .toast{
+      position:fixed;bottom:24px;right:24px;
+      background:var(--bg-3);border:1px solid var(--border-2);
+      padding:12px 18px;border-radius:var(--radius);
+      font-size:13px;color:var(--text-0);
+      box-shadow:0 12px 32px rgba(0,0,0,.4);
+      opacity:0;transform:translateY(8px);pointer-events:none;
+      transition:opacity .2s,transform .2s;z-index:200;
+    }
+    .toast.show{opacity:1;transform:translateY(0)}
+    .toast.success{border-left:3px solid var(--green)}
+    .toast.error{border-left:3px solid var(--red)}
+
+    /* ─── AUTH GATE ─── */
+    .auth{
+      position:fixed;inset:0;background:var(--bg-0);
+      display:grid;place-items:center;z-index:1000;
+    }
+    .auth-card{
+      background:var(--bg-2);border:1px solid var(--border-gold);
+      border-radius:var(--radius-lg);padding:32px;max-width:420px;width:90%;
+      box-shadow:0 24px 56px rgba(0,0,0,.5);
+    }
+    .auth-card h1{font-family:Georgia,serif;color:var(--gold);font-size:24px;margin-bottom:6px}
+    .auth-card .sub{color:var(--text-2);font-size:13px;margin-bottom:24px}
+    .auth-card label{display:block;color:var(--text-1);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+    .auth-card input{
+      width:100%;padding:12px 14px;border-radius:var(--radius);
+      background:var(--bg-1);border:1px solid var(--border-2);color:var(--text-0);font-size:14px;
+    }
+    .auth-card input:focus{outline:0;border-color:var(--gold)}
+    .auth-card .btn{
+      width:100%;padding:13px;border-radius:var(--radius);background:var(--gold);color:var(--bg-0);
+      font-weight:700;border:0;font-size:14px;margin-top:18px;letter-spacing:.02em;
+    }
+    .auth-card .btn:hover{background:var(--gold-light)}
+    .auth-card .err{color:var(--red);font-size:12px;margin-top:10px;min-height:16px}
+  </style>
+</head>
+<body>
+
+<!-- AUTH GATE -->
+<div class="auth" id="auth">
+  <div class="auth-card">
+    <h1>Infinity OS</h1>
+    <p class="sub">Sales Operating System · acceso restringido</p>
+    <label>Token de acceso</label>
+    <input id="auth-token" type="password" placeholder="DASHBOARD_TOKEN" autocomplete="off" />
+    <button class="btn" id="auth-go">Entrar →</button>
+    <div class="err" id="auth-err"></div>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div class="app" id="app" style="display:none">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="logo">IL</div>
+      <div>
+        <div class="name">Infinity OS</div>
+        <div class="sub">Sales Operating System</div>
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Operación</div>
+      <div class="nav-item" data-section="overview"><span class="icon">📊</span><span>Overview</span></div>
+      <div class="nav-item" data-section="inbox"><span class="icon">💬</span><span>Inbox</span><span class="badge" id="badge-inbox" style="display:none">0</span></div>
+      <div class="nav-item" data-section="pipeline"><span class="icon">🎯</span><span>Pipeline</span></div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Pauta</div>
+      <div class="nav-item" data-section="ads"><span class="icon">📢</span><span>Ads &amp; Métricas</span></div>
+      <div class="nav-item" data-section="precheck"><span class="icon">🛡️</span><span>Pre-check Ads</span></div>
+      <div class="nav-item" data-section="ctc"><span class="icon">🔗</span><span>Generator Links</span></div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Sistema</div>
+      <div class="nav-item" data-section="bot"><span class="icon">🤖</span><span>Bot &amp; Costos</span></div>
+      <div class="nav-item" data-section="docs"><span class="icon">📚</span><span>Playbooks</span></div>
+      <div class="nav-item" data-section="settings"><span class="icon">⚙️</span><span>Settings</span></div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar">IV</div>
+        <div class="user-info">
+          <div class="user-name">Iván Cadavieeco</div>
+          <div class="user-role">Admin</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-title" id="topbar-title">Overview</div>
+    <div class="topbar-meta">
+      <div class="stat-pill live"><strong id="t-leads-today">0</strong> leads hoy</div>
+      <div class="stat-pill"><span>Costo 24h:</span><strong id="t-cost-today">$0.00</strong></div>
+      <div class="stat-pill" id="t-last-update">—</div>
+      <button class="topbar-action" id="btn-refresh">↻ Refresh</button>
+    </div>
+  </header>
+
+  <!-- MAIN VIEW -->
+  <main class="main" id="main">
+    <div class="empty-state"><div class="em">⏳</div><div class="msg">Cargando…</div></div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ────────────────────────────────────────────
+   INFINITY OS — APP SHELL JS
+──────────────────────────────────────────── */
+
+// ─── AUTH ───
+const AUTH_KEY = 'infinity_os_token';
+const urlToken = new URLSearchParams(location.search).get('t');
+let TOKEN = urlToken || localStorage.getItem(AUTH_KEY) || '';
+
+function hasToken(){ return TOKEN && TOKEN.length >= 8; }
+function gateAuth(){
+  if (hasToken()){
+    document.getElementById('auth').style.display='none';
+    document.getElementById('app').style.display='grid';
+    boot();
+  } else {
+    document.getElementById('auth').style.display='grid';
+    document.getElementById('app').style.display='none';
+    document.getElementById('auth-token').focus();
+  }
+}
+document.getElementById('auth-go').addEventListener('click', async () => {
+  const v = document.getElementById('auth-token').value.trim();
+  if (!v) return;
+  TOKEN = v;
+  // Validate before persisting
+  try {
+    const r = await fetch(`/api/wa-dashboard?action=stats&t=${encodeURIComponent(TOKEN)}`);
+    if (!r.ok) { document.getElementById('auth-err').textContent = 'Token inválido'; return; }
+    localStorage.setItem(AUTH_KEY, TOKEN);
+    gateAuth();
+  } catch(e){ document.getElementById('auth-err').textContent = 'Error de conexión'; }
+});
+document.getElementById('auth-token').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('auth-go').click();
+});
+
+// ─── HELPERS ───
+async function api(path, opts={}){
+  const url = `/api/${path}${path.includes('?') ? '&' : '?'}t=${encodeURIComponent(TOKEN)}`;
+  const r = await fetch(url, opts);
+  if (r.status === 401) { localStorage.removeItem(AUTH_KEY); TOKEN=''; gateAuth(); throw new Error('Unauthorized'); }
+  return r.json();
+}
+function fmtMoney(n){ return '$' + (parseFloat(n||0)).toFixed(2); }
+function fmtInt(n){ return (n||0).toLocaleString('es-MX'); }
+function timeAgo(ts){
+  if(!ts) return '—';
+  const s = Math.floor((Date.now() - new Date(ts).getTime())/1000);
+  if (s<60) return 'ahora';
+  if (s<3600) return Math.floor(s/60) + 'm';
+  if (s<86400) return Math.floor(s/3600) + 'h';
+  return Math.floor(s/86400) + 'd';
+}
+function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function toast(msg, kind='success'){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + kind;
+  setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+// ─── NAV ───
+const sections = {
+  overview: { title:'Overview', render: renderOverview },
+  inbox:    { title:'Inbox · WhatsApp + Instagram', render: renderInbox },
+  pipeline: { title:'Pipeline', render: renderPipeline },
+  ads:      { title:'Ads & Métricas', render: renderAds },
+  precheck: { title:'Pre-check de Anuncios', render: renderPrecheck },
+  ctc:      { title:'Generator Links', render: renderCTC },
+  bot:      { title:'Bot & Costos', render: renderBot },
+  docs:     { title:'Playbooks', render: renderDocs },
+  settings: { title:'Settings', render: renderSettings },
+};
+let currentSection = 'overview';
+
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.addEventListener('click', () => navigate(el.dataset.section));
+});
+
+function navigate(name){
+  if (!sections[name]) return;
+  currentSection = name;
+  document.querySelectorAll('.nav-item').forEach(e => e.classList.toggle('active', e.dataset.section===name));
+  document.getElementById('topbar-title').textContent = sections[name].title;
+  sections[name].render(document.getElementById('main'));
+  // Update URL hash without reload
+  history.replaceState(null, '', `#${name}`);
+}
+
+// ─── BOOT ───
+async function boot(){
+  // Initial nav from hash
+  const hash = location.hash.replace('#','');
+  const initial = sections[hash] ? hash : 'overview';
+  document.querySelector(`.nav-item[data-section="${initial}"]`)?.classList.add('active');
+  document.getElementById('topbar-title').textContent = sections[initial].title;
+  currentSection = initial;
+  await refreshTopbar();
+  sections[initial].render(document.getElementById('main'));
+  // Periodic refresh: topbar every 5s, section every 4s
+  setInterval(refreshTopbar, 5000);
+  setInterval(() => { sections[currentSection].render(document.getElementById('main'), { silent:true }); }, 4000);
+}
+
+document.getElementById('btn-refresh').addEventListener('click', () => {
+  refreshTopbar();
+  sections[currentSection].render(document.getElementById('main'));
+  toast('Actualizado');
+});
+
+// ─── TOPBAR LIVE ───
+async function refreshTopbar(){
+  try {
+    const [stats, cost] = await Promise.all([
+      api('wa-dashboard?action=stats'),
+      api('wa-dashboard?action=cost'),
+    ]);
+    document.getElementById('t-leads-today').textContent = fmtInt(stats.totalLeads);
+    document.getElementById('t-cost-today').textContent = fmtMoney(cost.cost_24h_usd);
+    document.getElementById('t-last-update').textContent = 'actualizado ' + new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    // inbox badge
+    const inboxBadge = document.getElementById('badge-inbox');
+    if (stats.activeLeads > 0) { inboxBadge.style.display=''; inboxBadge.textContent = stats.activeLeads; }
+    else inboxBadge.style.display='none';
+  } catch(e){}
+}
+
+/* ────────────────────────────────────────────
+   SECTIONS — render functions
+──────────────────────────────────────────── */
+
+async function renderOverview(el, opts={}){
+  if (!opts.silent) el.innerHTML = '<div class="empty-state"><div class="loading"></div></div>';
+  try {
+    const [stats, cost, hotLeadsRes] = await Promise.all([
+      api('wa-dashboard?action=stats'),
+      api('wa-dashboard?action=cost'),
+      api('wa-dashboard?action=hot-leads'),
+    ]);
+    const hotLeads = (hotLeadsRes.leads || []).filter(l => (l.lead_score || 0) > 0);
+    el.innerHTML = `
+      <div class="grid-4">
+        <div class="kpi">
+          <div class="lbl">Leads totales</div>
+          <div class="val gold">${fmtInt(stats.totalLeads)}</div>
+          <div class="sub">${stats.activeLeads} activos · ${stats.wonLeads} cerrados</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Sesiones agendadas</div>
+          <div class="val">${fmtInt(stats.scheduledLeads)}</div>
+          <div class="sub">esperando conversión</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Escalaciones pendientes</div>
+          <div class="val ${stats.pendingEsc > 0 ? 'gold' : ''}">${fmtInt(stats.pendingEsc)}</div>
+          <div class="sub">${stats.pendingEsc > 0 ? '⚠️ requieren atención' : 'sin pendientes'}</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Costo Bot 24h</div>
+          <div class="val">${fmtMoney(cost.cost_24h_usd)}</div>
+          <div class="sub">~${fmtMoney(cost.projected_monthly_usd)}/mes proyectado</div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px" class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Últimas 24 horas</div>
+          </div>
+          <div style="display:grid;gap:10px">
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-1)">
+              <span style="color:var(--text-2)">Calls al bot</span>
+              <strong>${fmtInt(cost.calls_today)}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-1)">
+              <span style="color:var(--text-2)">Costo promedio por call</span>
+              <strong>${fmtMoney(cost.avg_cost_per_call)}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0">
+              <span style="color:var(--text-2)">Gasto últimos 7 días</span>
+              <strong>${fmtMoney(cost.cost_7d_usd)}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Estado del sistema</div>
+          </div>
+          <div style="display:grid;gap:8px;font-size:13px">
+            <div style="display:flex;align-items:center;gap:10px"><span style="color:var(--green)">●</span>WhatsApp Bot Claude Sonnet 4.5 — LIVE</div>
+            <div style="display:flex;align-items:center;gap:10px"><span style="color:var(--green)">●</span>Webhook Meta — recibiendo</div>
+            <div style="display:flex;align-items:center;gap:10px"><span style="color:var(--green)">●</span>Cron follow-ups — cada 5 min</div>
+            <div style="display:flex;align-items:center;gap:10px"><span style="color:var(--green)">●</span>Cap diario Claude — $3 USD</div>
+            <div style="display:flex;align-items:center;gap:10px"><span style="color:var(--text-3)">○</span>Instagram Messaging — pendiente fase 2</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px" class="card">
+        <div class="card-header">
+          <div class="card-title">🔥 TOP HOT LEADS — Llama YA</div>
+          <a href="#inbox" onclick="navigate('inbox')" style="font-size:11px;color:var(--gold)">Ver todos →</a>
+        </div>
+        ${hotLeads.length ? `
+          <div style="display:flex;flex-direction:column;gap:8px">
+          ${hotLeads.slice(0, 10).map(l => {
+            const tierColor = l.tier === 'HOT' ? 'var(--red)' : l.tier === 'WARM' ? 'var(--orange)' : l.tier === 'LUKEWARM' ? 'var(--blue)' : 'var(--text-3)';
+            const channelEmoji = l.channel === 'instagram' ? '📷' : '💬';
+            return `
+            <div onclick="window.open('/wa-dashboard.html?t=${encodeURIComponent(TOKEN)}#${l.id}','_blank')" style="display:flex;align-items:center;gap:14px;padding:10px 12px;background:var(--bg-1);border:1px solid var(--border-1);border-left:3px solid ${tierColor};border-radius:8px;cursor:pointer;transition:all .14s" onmouseover="this.style.background='var(--bg-3)'" onmouseout="this.style.background='var(--bg-1)'">
+              <div style="font-size:24px;font-weight:700;color:${tierColor};min-width:50px;text-align:center">
+                <div>${l.tier_emoji}</div>
+                <div style="font-size:14px;line-height:1">${l.lead_score || 0}</div>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+                  <strong style="font-size:13px">${escapeHtml(l.full_name || l.wa_name || l.wa_phone || 'Sin nombre')}</strong>
+                  <span style="font-size:10px;color:${tierColor};font-weight:700;letter-spacing:.06em">${l.tier}</span>
+                </div>
+                <div style="font-size:11px;color:var(--text-3)">${channelEmoji} ${l.channel || 'WA'} · ${l.message_count || 0} msgs · ${timeAgo(l.last_message_at)}</div>
+                ${l.last_inbound ? `<div style="font-size:11px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:4px">"${escapeHtml(l.last_inbound.substring(0, 80))}"</div>` : ''}
+              </div>
+              <div style="display:flex;flex-direction:column;gap:3px;font-size:10px;color:var(--text-3);text-align:right">
+                ${l.email ? `<span>📧 ${l.email.substring(0,20)}…</span>` : ''}
+                ${l.lead_phone ? `<span>📱 ${l.lead_phone}</span>` : ''}
+                ${l.matched_plan ? `<span style="color:var(--purple);font-weight:600">${l.matched_plan}</span>` : ''}
+              </div>
+            </div>`;
+          }).join('')}
+          </div>
+        ` : `<div class="empty-state"><div class="msg">Aún no hay leads scored</div><div class="hint">Cuando Majo procese conversaciones, aquí aparecen los más calientes</div></div>`}
+      </div>
+
+      <div style="margin-top:20px" class="card">
+        <div class="card-header">
+          <div class="card-title">Top leads que consumen Claude</div>
+        </div>
+        ${cost.top_spenders?.length ? `
+          <table style="width:100%;font-size:13px">
+            <thead><tr style="color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:.1em">
+              <th style="text-align:left;padding:6px 0">Lead ID</th>
+              <th style="text-align:right;padding:6px 0">Costo 24h</th>
+            </tr></thead>
+            <tbody>
+            ${cost.top_spenders.map(s => `<tr style="border-top:1px solid var(--border-1)">
+              <td style="padding:8px 0;font-family:monospace;font-size:11px;color:var(--text-2)">${s.lead_id.substring(0,8)}…</td>
+              <td style="text-align:right;padding:8px 0">${fmtMoney(s.cost_usd)}</td>
+            </tr>`).join('')}
+            </tbody>
+          </table>
+        ` : `<div class="empty-state"><div class="msg">Aún no hay calls registradas hoy</div></div>`}
+      </div>
+    `;
+  } catch(e){
+    el.innerHTML = `<div class="empty-state"><div class="em">⚠️</div><div class="msg">Error cargando overview: ${e.message}</div></div>`;
+  }
+}
+
+async function renderInbox(el, opts={}){
+  if (!opts.silent) el.innerHTML = '<div class="empty-state"><div class="loading"></div></div>';
+  try {
+    const r = await api('wa-dashboard?action=list');
+    const leads = r.leads || [];
+    if (!leads.length){
+      el.innerHTML = `<div class="empty-state"><div class="em">📭</div><div class="msg">Aún no hay leads</div><div class="hint">Cuando alguien escriba al WhatsApp aparecen aquí en vivo. <br>Estás listo para anuncios.</div></div>`;
+      return;
+    }
+    el.innerHTML = `<div class="card" style="padding:0"><div style="padding:14px 18px;border-bottom:1px solid var(--border-1);display:flex;justify-content:space-between;align-items:center"><div class="card-title">${leads.length} conversación${leads.length>1?'es':''}</div><a href="/wa-dashboard.html?t=${encodeURIComponent(TOKEN)}" target="_blank" style="font-size:12px;color:var(--gold)">Abrir vista completa →</a></div>
+    <div style="max-height:calc(100vh - 220px);overflow-y:auto">
+    ${leads.map(l => `
+      <div style="display:flex;padding:14px 18px;border-bottom:1px solid var(--border-1);gap:14px;cursor:pointer;transition:background .1s" onmouseover="this.style.background='var(--bg-3)'" onmouseout="this.style.background=''" onclick="window.open('/wa-dashboard.html?t=${encodeURIComponent(TOKEN)}#${l.id}','_blank')">
+        <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,${l.channel==='instagram'?'#E1306C,#833AB4':'var(--gold-dark),var(--gold)'});display:grid;place-items:center;font-weight:600;color:#fff;flex-shrink:0">${(l.name||l.wa_phone||'?').substring(0,2).toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;align-items:center">
+            <strong style="font-size:13px">${escapeHtml(l.name || l.wa_phone)}</strong>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:${l.channel==='instagram'?'rgba(225,48,108,.14)':'rgba(37,211,102,.14)'};color:${l.channel==='instagram'?'#E1306C':'#25D366'};font-weight:600">${l.channel==='instagram'?'📷 IG':'💬 WA'}</span>
+              <span style="font-size:11px;color:var(--text-3)">${timeAgo(l.last_message_at)}</span>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px">${escapeHtml(l.last_message_body || '(sin mensajes)')}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <span style="font-size:10px;padding:2px 8px;border-radius:50px;background:rgba(199,167,108,.14);color:var(--gold);font-weight:600">${l.stage||'INITIAL'}</span>
+            ${l.matched_plan ? `<span style="font-size:10px;padding:2px 8px;border-radius:50px;background:var(--purple-soft);color:var(--purple);font-weight:600">${l.matched_plan}</span>` : ''}
+            ${l.priority==='urgent' ? `<span style="font-size:10px;padding:2px 8px;border-radius:50px;background:var(--red-soft);color:var(--red);font-weight:600">🚨 URGENT</span>` : ''}
+            ${l.bot_paused ? `<span style="font-size:10px;padding:2px 8px;border-radius:50px;background:var(--orange-soft);color:var(--orange);font-weight:600">⏸ Manual</span>` : ''}
+          </div>
+        </div>
+      </div>
+    `).join('')}
+    </div></div>`;
+  } catch(e){
+    el.innerHTML = `<div class="empty-state"><div class="em">⚠️</div><div class="msg">Error cargando inbox: ${e.message}</div></div>`;
+  }
+}
+
+async function renderPipeline(el, opts={}){
+  if (!opts.silent) el.innerHTML = '<div class="empty-state"><div class="loading"></div></div>';
+  try {
+    const r = await api('wa-dashboard?action=list');
+    const leads = r.leads || [];
+    const stages = ['INITIAL','QUALIFYING','EDUCATING','PRESENTING','CLOSING','SCHEDULED','WON','LOST'];
+    const byStage = {};
+    stages.forEach(s => byStage[s] = []);
+    leads.forEach(l => { (byStage[l.stage]||byStage.INITIAL).push(l); });
+
+    const stageColor = {
+      INITIAL:'var(--text-2)', QUALIFYING:'var(--blue)', EDUCATING:'var(--purple)',
+      PRESENTING:'var(--gold)', CLOSING:'var(--orange)', SCHEDULED:'var(--green)',
+      WON:'var(--green)', LOST:'var(--red)'
+    };
+    el.innerHTML = `
+      <div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:12px">
+        ${stages.map(stage => `
+          <div style="min-width:240px;flex:1;background:var(--bg-2);border:1px solid var(--border-1);border-radius:var(--radius-lg);display:flex;flex-direction:column;max-height:calc(100vh - 140px)">
+            <div style="padding:12px 14px;border-bottom:1px solid var(--border-1);display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:8px;height:8px;border-radius:50%;background:${stageColor[stage]}"></span>
+                <span style="font-size:11px;color:var(--text-1);text-transform:uppercase;letter-spacing:.1em;font-weight:600">${stage}</span>
+              </div>
+              <span style="font-size:12px;color:var(--text-3)">${byStage[stage].length}</span>
+            </div>
+            <div style="overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:8px">
+            ${byStage[stage].map(l => `
+              <div style="background:var(--bg-1);border:1px solid var(--border-1);border-radius:var(--radius);padding:10px 12px;cursor:pointer;transition:all .12s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border-1)'" onclick="window.open('/wa-dashboard.html?t=${encodeURIComponent(TOKEN)}#${l.id}','_blank')">
+                <div style="font-size:12px;font-weight:600;margin-bottom:3px">${escapeHtml(l.name || l.wa_phone)}</div>
+                <div style="font-size:10px;color:var(--text-3);margin-bottom:6px">${timeAgo(l.last_message_at)} · ${l.message_count||0} msgs</div>
+                ${l.matched_plan ? `<span style="font-size:9px;padding:1px 6px;border-radius:50px;background:var(--purple-soft);color:var(--purple);font-weight:600">${l.matched_plan}</span>` : ''}
+              </div>
+            `).join('') || '<div style="text-align:center;color:var(--text-3);font-size:11px;padding:20px 0">vacío</div>'}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } catch(e){
+    el.innerHTML = `<div class="empty-state"><div class="em">⚠️</div><div class="msg">Error: ${e.message}</div></div>`;
+  }
+}
+
+async function renderAds(el, opts={}){
+  if (!opts.silent) el.innerHTML = '<div class="empty-state"><div class="loading"></div></div>';
+  try {
+    const r = await api('dashboard');
+    const today = r.today || {};
+    const account = r.account || {};
+    el.innerHTML = `
+      <div class="grid-4">
+        <div class="kpi"><div class="lbl">Gasto hoy</div><div class="val gold">${fmtMoney(today.spend)}</div><div class="sub">${account.currency || 'MXN'}</div></div>
+        <div class="kpi"><div class="lbl">Impresiones hoy</div><div class="val">${fmtInt(today.impressions)}</div><div class="sub">CPM ${fmtMoney(today.cpm)}</div></div>
+        <div class="kpi"><div class="lbl">Clicks hoy</div><div class="val">${fmtInt(today.clicks)}</div><div class="sub">CTR ${(parseFloat(today.ctr)||0).toFixed(2)}% · CPC ${fmtMoney(today.cpc)}</div></div>
+        <div class="kpi"><div class="lbl">Balance cuenta</div><div class="val">${fmtMoney(account.balance)}</div><div class="sub">Gastado total: ${fmtMoney(account.amount_spent)}</div></div>
+      </div>
+
+      <div style="margin-top:20px" class="card">
+        <div class="card-header"><div class="card-title">Anuncios activos vs rechazados</div><a href="/dashboard.html?t=${encodeURIComponent(TOKEN)}" target="_blank" style="font-size:12px;color:var(--gold)">Vista detallada →</a></div>
+        <div style="display:grid;gap:10px">
+        ${(r.ads||[]).slice(0,8).map(a => `
+          <div style="display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--border-1)">
+            ${a.thumbnail ? `<img src="${a.thumbnail}" style="width:48px;height:48px;border-radius:8px;object-fit:cover">` : `<div style="width:48px;height:48px;border-radius:8px;background:var(--bg-3)"></div>`}
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(a.name||'')}</div>
+              <div style="font-size:10px;color:var(--text-3);margin-top:2px">${a.status}</div>
+            </div>
+            <span style="font-size:10px;padding:3px 9px;border-radius:50px;background:${a.status==='ACTIVE'?'var(--green-soft)':'var(--red-soft)'};color:${a.status==='ACTIVE'?'var(--green)':'var(--red)'};font-weight:600">${a.status==='ACTIVE'?'✓ ACTIVO':'✗ ' + a.status}</span>
+          </div>
+        `).join('')}
+        </div>
+      </div>
+    `;
+  } catch(e){
+    el.innerHTML = `<div class="empty-state"><div class="em">⚠️</div><div class="msg">Error cargando ads: ${e.message}</div><div class="hint">Verifica META_MARKETING_TOKEN en Vercel.</div></div>`;
+  }
+}
+
+function renderPrecheck(el){
+  el.innerHTML = `<div class="card" style="text-align:center;padding:50px 24px">
+    <div style="font-size:34px;margin-bottom:14px">🛡️</div>
+    <h2 style="font-family:Georgia,serif;color:var(--gold);font-size:20px;margin-bottom:8px">Pre-check de Anuncios</h2>
+    <p style="color:var(--text-1);font-size:14px;max-width:520px;margin:0 auto 22px">Antes de subir un creativo a Meta, Claude lo evalúa y predice si será rechazado. Te da el copy reescrito que SÍ pasa.</p>
+    <a href="/ad-precheck.html?t=${encodeURIComponent(TOKEN)}" target="_blank" style="display:inline-block;background:var(--gold);color:var(--bg-0);padding:12px 26px;border-radius:10px;font-weight:600;font-size:14px">Abrir pre-check →</a>
+  </div>`;
+}
+
+function renderCTC(el){
+  el.innerHTML = `<div class="card" style="text-align:center;padding:50px 24px">
+    <div style="font-size:34px;margin-bottom:14px">🔗</div>
+    <h2 style="font-family:Georgia,serif;color:var(--gold);font-size:20px;margin-bottom:8px">Generator de Links</h2>
+    <p style="color:var(--text-1);font-size:14px;max-width:520px;margin:0 auto 22px">Genera URLs <code style="color:var(--gold)">wa.me</code> con tracking automático <code style="color:var(--gold)">[il-ref:…]</code>. Incluye QR descargable.</p>
+    <a href="/ctc-gen.html" target="_blank" style="display:inline-block;background:var(--gold);color:var(--bg-0);padding:12px 26px;border-radius:10px;font-weight:600;font-size:14px">Abrir generator →</a>
+  </div>`;
+}
+
+async function renderBot(el, opts={}){
+  if (!opts.silent) el.innerHTML = '<div class="empty-state"><div class="loading"></div></div>';
+  try {
+    const cost = await api('wa-dashboard?action=cost');
+    el.innerHTML = `
+      <div class="grid-3">
+        <div class="kpi"><div class="lbl">Gasto Claude hoy</div><div class="val gold">${fmtMoney(cost.cost_24h_usd)}</div><div class="sub">Cap diario $3 USD</div></div>
+        <div class="kpi"><div class="lbl">Calls hoy</div><div class="val">${fmtInt(cost.calls_today)}</div><div class="sub">Promedio ${fmtMoney(cost.avg_cost_per_call)}/call</div></div>
+        <div class="kpi"><div class="lbl">Proyección mensual</div><div class="val">${fmtMoney(cost.projected_monthly_usd)}</div><div class="sub">Basado en últimos 7 días</div></div>
+      </div>
+
+      <div style="margin-top:20px" class="card">
+        <div class="card-header"><div class="card-title">Optimizaciones activas</div></div>
+        <div style="display:grid;gap:8px;font-size:13px">
+          <div>✅ <strong>Prompt caching</strong> — system prompt cacheado 5 min (-90% input cost repetido)</div>
+          <div>✅ <strong>Haiku 4.5</strong> en follow-ups — 4x más barato que Sonnet</div>
+          <div>✅ <strong>Canned replies</strong> para 30min/7day y mensajes triviales ("ok", "👍") — $0</div>
+          <div>✅ <strong>Pre-filter</strong> de mensajes triviales antes de llamar Claude</div>
+          <div>✅ <strong>Anti-runaway</strong> — skip leads con >40 mensajes (anti loop)</div>
+          <div>✅ <strong>Cron cada 5 min</strong> (no cada minuto)</div>
+          <div>✅ <strong>Budget cap $3 USD/día</strong> hard stop</div>
+          <div>✅ <strong>History limitado</strong> a 12 mensajes (no 30)</div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px" class="card">
+        <div class="card-header"><div class="card-title">System Prompt activo</div></div>
+        <p style="color:var(--text-2);font-size:13px;margin-bottom:14px">El bot opera con un system prompt versionado en GitHub. Para editarlo: modifica <code style="color:var(--gold)">api/wa-bot/system-prompt.md</code> y push.</p>
+        <a href="https://github.com/ivanrdsm-dot/infinity-legacy/blob/main/api/wa-bot/system-prompt.md" target="_blank" style="display:inline-block;background:transparent;color:var(--gold);padding:9px 18px;border-radius:8px;font-weight:600;font-size:13px;border:1px solid var(--gold)">Ver/editar en GitHub →</a>
+      </div>
+    `;
+  } catch(e){
+    el.innerHTML = `<div class="empty-state"><div class="em">⚠️</div><div class="msg">Error: ${e.message}</div></div>`;
+  }
+}
+
+function renderDocs(el){
+  const playbooks = [
+    { id:'meta-ads-playbook.md', title:'📘 Meta Ads Playbook', sub:'Por qué Meta rechaza nuestros ads + cómo evitarlo' },
+    { id:'roadmap-sistema-perfecto.md', title:'🎯 Roadmap del Sistema Perfecto', sub:'28 mejoras priorizadas con effort vs impact' },
+  ];
+  el.innerHTML = `<div style="display:grid;gap:14px">
+    ${playbooks.map(p => `
+      <a href="/docs/${p.id}" target="_blank" class="card" style="display:block;text-decoration:none;transition:all .14s;border-color:var(--border-1)" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border-1)'">
+        <div style="font-size:16px;font-weight:600;color:var(--text-0);margin-bottom:4px">${p.title}</div>
+        <div style="font-size:12px;color:var(--text-2)">${p.sub}</div>
+      </a>
+    `).join('')}
+  </div>`;
+}
+
+async function renderSettings(el){
+  el.innerHTML = `
+    <div class="card" style="margin-bottom:14px;border-color:var(--orange);background:linear-gradient(180deg,rgba(245,158,11,.06),transparent)">
+      <div class="card-header"><div class="card-title" style="color:var(--orange)">⚠️ Acción pendiente — Activar n\xfamero real 5566253065</div></div>
+      <p style="font-size:13px;color:var(--text-1);margin-bottom:12px;line-height:1.55">
+        El n\xfamero 5566253065 est\xe1 verificado pero a\xfan en estado <strong style="color:var(--orange)">PENDING</strong> porque Meta tiene cach\xe9 server-side de la vieja cuenta WhatsApp Business.
+        Meta tarda 1-48h en liberar autom\xe1tico. Cuando creas que ya pas\xf3 tiempo, presiona <strong>Reintentar registro</strong>. Si funciona,
+        bot se activa solo + te llega notificaci\xf3n a tu WhatsApp personal.
+      </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button onclick="retryRegister()" id="btn-retry" style="background:var(--orange);color:var(--bg-0);border:0;padding:10px 18px;border-radius:8px;font-weight:700;font-size:13px">↻ Reintentar registro</button>
+        <button onclick="checkPhoneStatus()" id="btn-check" style="background:transparent;border:1px solid var(--border-2);color:var(--text-1);padding:10px 18px;border-radius:8px;font-size:13px">🔍 Solo verificar status</button>
+        <button onclick="swapToReal()" id="btn-swap" style="background:var(--green-soft);color:var(--green);border:1px solid var(--green);padding:10px 18px;border-radius:8px;font-weight:700;font-size:13px;display:none">✓ Swap a n\xfamero real ahora</button>
+      </div>
+      <div id="retry-result" style="margin-top:14px;font-size:12px;font-family:monospace;color:var(--text-2);padding:10px;background:var(--bg-1);border-radius:8px;display:none"></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Conexiones</div></div>
+        <div style="display:grid;gap:12px;font-size:13px">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg-1);border-radius:8px">
+            <span style="font-size:18px">💬</span>
+            <div style="flex:1"><strong>WhatsApp Cloud API</strong><div style="font-size:11px;color:var(--text-3)">5566253065 · WABA Infinity Legacy</div></div>
+            <span style="font-size:10px;padding:3px 9px;border-radius:50px;background:var(--green-soft);color:var(--green);font-weight:600">CONNECTED</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg-1);border-radius:8px">
+            <span style="font-size:18px">📷</span>
+            <div style="flex:1"><strong>Instagram Business Messaging</strong><div style="font-size:11px;color:var(--text-3)">@infinitylegacy.of · webhook listo, falta agregar producto Instagram a la App</div></div>
+            <span style="font-size:10px;padding:3px 9px;border-radius:50px;background:var(--orange-soft);color:var(--orange);font-weight:600">SETUP 80%</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg-1);border-radius:8px">
+            <span style="font-size:18px">🤖</span>
+            <div style="flex:1"><strong>Anthropic Claude API</strong><div style="font-size:11px;color:var(--text-3)">Sonnet 4.5 + Haiku 4.5 · auto-reload activo</div></div>
+            <span style="font-size:10px;padding:3px 9px;border-radius:50px;background:var(--green-soft);color:var(--green);font-weight:600">CONNECTED</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg-1);border-radius:8px">
+            <span style="font-size:18px">📊</span>
+            <div style="flex:1"><strong>Meta Marketing API</strong><div style="font-size:11px;color:var(--text-3)">Ad Account 1865053780841329 · System User token permanente</div></div>
+            <span style="font-size:10px;padding:3px 9px;border-radius:50px;background:var(--green-soft);color:var(--green);font-weight:600">CONNECTED</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg-1);border-radius:8px">
+            <span style="font-size:18px">🗄️</span>
+            <div style="flex:1"><strong>Supabase Postgres</strong><div style="font-size:11px;color:var(--text-3)">egdiqpywctftcohqujhv · service_role</div></div>
+            <span style="font-size:10px;padding:3px 9px;border-radius:50px;background:var(--green-soft);color:var(--green);font-weight:600">CONNECTED</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">Acciones</div></div>
+        <div style="display:grid;gap:8px;font-size:13px">
+          <button onclick="localStorage.removeItem('${AUTH_KEY}'); location.reload()" style="text-align:left;padding:10px 14px;background:var(--bg-1);border:1px solid var(--border-2);color:var(--text-0);border-radius:8px">🔒 Cerrar sesión</button>
+          <button onclick="if(confirm('⚠️ Esto BORRA TODOS los leads, mensajes, follow-ups, escalaciones y notas. ¿Continuar?')) wipeAll()" style="text-align:left;padding:10px 14px;background:var(--red-soft);border:1px solid var(--red);color:var(--red);border-radius:8px">🗑️ Limpiar TODA la base de datos (cuidado)</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function retryRegister(){
+  const btn = document.getElementById('btn-retry');
+  const out = document.getElementById('retry-result');
+  btn.disabled = true; btn.textContent = '⏳ Intentando...';
+  out.style.display = 'block';
+  out.textContent = 'Conectando con Meta Graph API…';
+  try {
+    const r = await api('wa-register-retry');
+    if (r.ok && (r.registered || r.already_connected)){
+      out.innerHTML = '<span style="color:var(--green)">✅ ' + (r.already_connected ? 'Ya estaba CONNECTED.' : '¡REGISTRO EXITOSO!') + '</span>\n\nStatus: ' + JSON.stringify(r.phone_status, null, 2);
+      document.getElementById('btn-swap').style.display = '';
+      toast('🎉 5566253065 CONNECTED — listo para activar', 'success');
+    } else {
+      const err = r.error?.error_user_msg || r.error?.message || JSON.stringify(r.error);
+      out.innerHTML = '<span style="color:var(--orange)">⚠️ Meta dice:</span>\n' + err + '\n\n<span style="color:var(--text-2)">' + (r.suggestion || '') + '</span>';
+      toast('Meta a\xfan no libera el n\xfamero — reintenta en 1-2h', 'error');
+    }
+  } catch(e){
+    out.innerHTML = '<span style="color:var(--red)">Error: ' + e.message + '</span>';
+  } finally {
+    btn.disabled = false; btn.textContent = '↻ Reintentar registro';
+  }
+}
+
+async function checkPhoneStatus(){
+  const out = document.getElementById('retry-result');
+  out.style.display = 'block';
+  out.textContent = 'Verificando…';
+  try {
+    // Re-uses the same endpoint which checks status first
+    const r = await api('wa-register-retry');
+    out.innerHTML = '<strong>Status actual:</strong>\n' + JSON.stringify(r.phone_status || r, null, 2);
+  } catch(e){ out.textContent = 'Error: ' + e.message; }
+}
+
+async function swapToReal(){
+  if (!confirm('Esto cambia WA_PHONE_NUMBER_ID en Vercel al n\xfamero real 5566253065 (1058413820699577). El bot pasar\xe1 a operar ese n\xfamero en ~30 seg. ¿Continuar?')) return;
+  alert('Este swap lo tengo que hacer yo desde la terminal (vercel env). Av\xedsame por chat y lo dejo listo en 30 seg.');
+}
+
+async function wipeAll(){
+  try {
+    const r = await api('wa-dashboard?action=wipe', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({confirm:'WIPE_ALL'}) });
+    if (r.ok){ toast('Base de datos limpia ✓', 'success'); refreshTopbar(); sections[currentSection].render(document.getElementById('main')); }
+    else toast('Error: ' + (r.error||'desconocido'), 'error');
+  } catch(e){ toast('Error: ' + e.message, 'error'); }
+}
+
+// ─── START ───
+gateAuth();
+</script>
+</body>
+</html>

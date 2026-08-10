@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Infinity Legacy</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" type="image/png" href="/images/logo-gold-new.webp" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --gold: #C7A76C;
+      --gold-light: #DFC99A;
+      --gold-dark: #A8843D;
+      --cream: #F6F1E6;
+      --dark: #0B0F14;
+      --dark-mid: #1A2030;
+      --gray: #3A3F46;
+      --gray-light: #6B7280;
+      --border: #2A3140;
+      --green: #4ADE80;
+      --red: #F87171;
+      --yellow: #FBBF24;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+      background: var(--dark);
+      color: var(--cream);
+      min-height: 100vh;
+    }
+    .header {
+      background: linear-gradient(180deg, var(--dark-mid) 0%, var(--dark) 100%);
+      border-bottom: 1px solid var(--gold-dark);
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header h1 {
+      font-family: Georgia, serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--gold);
+      letter-spacing: -0.01em;
+    }
+    .header .live {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--gray-light);
+    }
+    .live::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    .container {
+      max-width: 1280px;
+      margin: 32px auto;
+      padding: 0 32px;
+    }
+    .grid {
+      display: grid;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .grid-4 { grid-template-columns: repeat(4, 1fr); }
+    .grid-2 { grid-template-columns: 1fr 1fr; }
+    @media (max-width: 900px) {
+      .grid-4 { grid-template-columns: repeat(2, 1fr); }
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--dark-mid);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .card-title {
+      font-size: 11px;
+      color: var(--gray-light);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .card-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--cream);
+      font-family: Georgia, serif;
+      line-height: 1.1;
+    }
+    .card-sub {
+      font-size: 12px;
+      color: var(--gray-light);
+      margin-top: 6px;
+    }
+    .card-sub.positive { color: var(--green); }
+    .card-sub.negative { color: var(--red); }
+    .section-title {
+      font-family: Georgia, serif;
+      font-size: 18px;
+      color: var(--gold);
+      margin-bottom: 16px;
+      margin-top: 8px;
+    }
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .table th {
+      text-align: left;
+      padding: 12px;
+      color: var(--gray-light);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      border-bottom: 1px solid var(--border);
+    }
+    .table td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--cream);
+    }
+    .table tr:last-child td { border-bottom: none; }
+    .status {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .status.ACTIVE { background: rgba(74, 222, 128, 0.15); color: var(--green); }
+    .status.PAUSED { background: rgba(251, 191, 36, 0.15); color: var(--yellow); }
+    .status.DELETED, .status.ARCHIVED { background: rgba(248, 113, 113, 0.15); color: var(--red); }
+    .empty {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--gray-light);
+      font-style: italic;
+    }
+    .footer {
+      text-align: center;
+      padding: 32px;
+      color: var(--gray-light);
+      font-size: 11px;
+    }
+    .refresh-btn {
+      background: var(--gold);
+      color: var(--dark);
+      border: 0;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .refresh-btn:hover { background: var(--gold-light); }
+    canvas { max-width: 100%; }
+    .ads-list { display: grid; gap: 12px; }
+    .ad-row {
+      display: grid;
+      grid-template-columns: 60px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px;
+      background: rgba(255,255,255,0.02);
+      border-radius: 8px;
+    }
+    .ad-thumb {
+      width: 60px;
+      height: 60px;
+      background: var(--gray);
+      border-radius: 6px;
+      background-size: cover;
+      background-position: center;
+    }
+    .ad-info .name { font-size: 12px; font-weight: 600; margin-bottom: 4px; word-break: break-word; }
+    .ad-info .meta { font-size: 11px; color: var(--gray-light); }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>✨ Infinity Legacy — Marketing Dashboard</h1>
+      <div class="live" id="lastUpdate">Cargando…</div>
+    </div>
+    <button class="refresh-btn" onclick="loadData()">Refrescar</button>
+  </div>
+
+  <div class="container">
+    <div id="error" style="display:none;background:rgba(248,113,113,0.1);border:1px solid var(--red);color:var(--red);padding:16px;border-radius:8px;margin-bottom:16px"></div>
+
+    <!-- Top KPIs -->
+    <div class="grid grid-4">
+      <div class="card">
+        <div class="card-title">Gasto Hoy</div>
+        <div class="card-value" id="spend-today">—</div>
+        <div class="card-sub" id="spend-total">Total: —</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Impresiones Hoy</div>
+        <div class="card-value" id="impressions-today">—</div>
+        <div class="card-sub" id="reach-today">Alcance: —</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Clicks Hoy</div>
+        <div class="card-value" id="clicks-today">—</div>
+        <div class="card-sub" id="ctr-today">CTR: —</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Leads (WhatsApp)</div>
+        <div class="card-value" id="leads-today">—</div>
+        <div class="card-sub" id="cpl-today">CPL: —</div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Tendencia últimos 7 días</h2>
+    <div class="card">
+      <canvas id="trendChart" height="80"></canvas>
+    </div>
+
+    <div class="grid grid-2" style="margin-top:24px">
+      <div>
+        <h2 class="section-title">Campañas</h2>
+        <div class="card">
+          <table class="table">
+            <thead><tr><th>Nombre</th><th>Status</th><th>Budget/día</th></tr></thead>
+            <tbody id="campaignsTable"></tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <h2 class="section-title">Cuenta</h2>
+        <div class="card">
+          <table class="table">
+            <tbody id="accountTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Anuncios</h2>
+    <div class="card">
+      <div class="ads-list" id="adsList"></div>
+    </div>
+
+    <div class="footer">
+      🔒 Dashboard privado · Infinity Legacy · Datos en vivo desde Meta Marketing API
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const TOKEN = params.get('t');
+    let trendChart = null;
+
+    if (!TOKEN) {
+      document.body.innerHTML = '<div style="padding:48px;text-align:center;color:#F87171;font-family:sans-serif">⛔ Token requerido. Pide tu URL al admin del sistema.</div>';
+    }
+
+    function fmtMoney(n) {
+      return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(n || 0);
+    }
+    function fmtNum(n) {
+      return new Intl.NumberFormat('es-MX').format(n || 0);
+    }
+    function fmtPct(n) {
+      return ((n || 0).toFixed(2)) + '%';
+    }
+    function fmtDate(iso) {
+      try { return new Date(iso).toLocaleString('es-MX'); } catch { return iso; }
+    }
+
+    async function loadData() {
+      document.getElementById('lastUpdate').textContent = 'Actualizando…';
+      try {
+        const r = await fetch('/api/dashboard?t=' + encodeURIComponent(TOKEN));
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({}));
+          throw new Error(err.error || 'HTTP ' + r.status);
+        }
+        const d = await r.json();
+        render(d);
+        document.getElementById('error').style.display = 'none';
+      } catch (e) {
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('error').textContent = '⚠️ ' + e.message;
+        document.getElementById('lastUpdate').textContent = 'Error';
+      }
+    }
+
+    function render(d) {
+      document.getElementById('lastUpdate').textContent = 'Última actualización: ' + fmtDate(d.timestamp);
+
+      // KPIs
+      document.getElementById('spend-today').textContent = fmtMoney(d.today.spend);
+      document.getElementById('spend-total').textContent = 'Total cuenta: ' + fmtMoney(d.account.amount_spent);
+      document.getElementById('impressions-today').textContent = fmtNum(d.today.impressions);
+      document.getElementById('reach-today').textContent = 'Alcance: ' + fmtNum(d.today.reach);
+      document.getElementById('clicks-today').textContent = fmtNum(d.today.clicks);
+      document.getElementById('ctr-today').textContent = 'CTR: ' + fmtPct(d.today.ctr);
+
+      const leads = (d.today.actions || []).filter(a => a.action_type === 'lead' || a.action_type === 'onsite_conversion.lead_grouped').reduce((s, a) => s + parseInt(a.value || 0), 0);
+      document.getElementById('leads-today').textContent = leads || 0;
+      document.getElementById('cpl-today').textContent = leads > 0 ? 'CPL: ' + fmtMoney(d.today.spend / leads) : 'CPL: —';
+
+      // Trend chart
+      const labels = d.daily.map(x => x.date.substring(5));
+      const ctx = document.getElementById('trendChart').getContext('2d');
+      if (trendChart) trendChart.destroy();
+      trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Gasto (MXN)', data: d.daily.map(x => x.spend), borderColor: '#C7A76C', backgroundColor: 'rgba(199,167,108,0.1)', tension: 0.3, fill: true, yAxisID: 'y' },
+            { label: 'Clicks', data: d.daily.map(x => x.clicks), borderColor: '#4ADE80', backgroundColor: 'rgba(74,222,128,0.05)', tension: 0.3, yAxisID: 'y1' }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { labels: { color: '#F6F1E6' } }
+          },
+          scales: {
+            x: { ticks: { color: '#6B7280' }, grid: { color: '#1A2030' } },
+            y: { position: 'left', ticks: { color: '#C7A76C' }, grid: { color: '#1A2030' }, title: { display: true, text: 'Gasto MXN', color: '#C7A76C' } },
+            y1: { position: 'right', ticks: { color: '#4ADE80' }, grid: { display: false }, title: { display: true, text: 'Clicks', color: '#4ADE80' } }
+          }
+        }
+      });
+
+      // Campaigns table
+      const tbody = document.getElementById('campaignsTable');
+      tbody.innerHTML = '';
+      d.campaigns.forEach(c => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${c.name}</td><td><span class="status ${c.status}">${c.status}</span></td><td>${c.daily_budget_mxn ? fmtMoney(c.daily_budget_mxn) : '—'}</td>`;
+        tbody.appendChild(tr);
+      });
+      if (d.campaigns.length === 0) tbody.innerHTML = '<tr><td colspan="3" class="empty">Sin campañas todavía</td></tr>';
+
+      // Account table
+      const acct = document.getElementById('accountTable');
+      acct.innerHTML = `
+        <tr><td style="color:var(--gray-light)">Cuenta</td><td>${d.account.name}</td></tr>
+        <tr><td style="color:var(--gray-light)">Moneda</td><td>${d.account.currency}</td></tr>
+        <tr><td style="color:var(--gray-light)">Zona horaria</td><td>${d.account.timezone}</td></tr>
+        <tr><td style="color:var(--gray-light)">Gasto total</td><td>${fmtMoney(d.account.amount_spent)}</td></tr>
+        <tr><td style="color:var(--gray-light)">Balance</td><td>${fmtMoney(d.account.balance)}</td></tr>
+      `;
+
+      // Ads list
+      const list = document.getElementById('adsList');
+      list.innerHTML = '';
+      d.ads.forEach(a => {
+        const row = document.createElement('div');
+        row.className = 'ad-row';
+        const thumb = a.thumbnail ? `<div class="ad-thumb" style="background-image:url('${a.thumbnail}')"></div>` : '<div class="ad-thumb"></div>';
+        row.innerHTML = `${thumb}<div class="ad-info"><div class="name">${a.name}</div><div class="meta">${a.title || ''}</div></div><span class="status ${a.status}">${a.status}</span>`;
+        list.appendChild(row);
+      });
+      if (d.ads.length === 0) list.innerHTML = '<div class="empty">Sin anuncios creados</div>';
+    }
+
+    // Initial load + auto-refresh every 5 min
+    if (TOKEN) {
+      loadData();
+      setInterval(loadData, 5 * 60 * 1000);
+    }
+  </script>
+</body>
+</html>

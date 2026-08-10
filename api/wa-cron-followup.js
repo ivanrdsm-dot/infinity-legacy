@@ -1,0 +1,224 @@
+/*
+ * Infinity Legacy — Cron Job de Follow-ups
+ *
+ * Se ejecuta cada 1 min via Vercel Cron. Revisa la cola de follow_ups
+ * pendientes, genera el mensaje contextual con Claude y lo envía.
+ *
+ * Configurar en vercel.json:
+ *   "crons": [{ "path": "/api/wa-cron-followup", "schedule": "* * * * *" }]
+ *
+ * Vars env: las mismas que /api/wa-webhook.js
+ */
+
+import { createClient } from '@supabase/supabase-js';
+import Anthropic from '@anthropic-ai/sdk';
+import fs from 'node:fs';
+import path from 'node:path';
+import ws from 'ws';
+
+// Lazy-init para serverless
+let _SYSTEM_PROMPT = null;
+function getSystemPrompt() {
+  if (_SYSTEM_PROMPT) return _SYSTEM_PROMPT;
+  try {
+    _SYSTEM_PROMPT = fs.readFileSync(path.join(process.cwd(), 'api/wa-bot/system-prompt.md'), 'utf-8');
+  } catch (e) {
+    console.error('[Cron] fs.readFileSync failed:', e.message);
+    _SYSTEM_PROMPT = 'Eres el Asistente Infinity Legacy. Genera follow-ups breves y empáticos.';
+  }
+  return _SYSTEM_PROMPT;
+}
+
+let _supabase = null;
+function getSupabase() {
+  if (_supabase) return _supabase;
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error('Supabase env missing');
+  _supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false },
+    realtime: { transport: ws },
+  });
+  return _supabase;
+}
+
+let _anthropic = null;
+function getAnthropic() {
+  if (_anthropic) return _anthropic;
+  if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY missing');
+  _anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return _anthropic;
+}
+
+export default async function handler(req, res) {
+  // Vercel cron auth header
+  const auth = req.headers['authorization'];
+  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).end('Unauthorized');
+  }
+
+  try {
+    // Pull follow-ups pendientes que ya vencieron (limit reducido de 20 a 5 — anti runaway)
+    const { data: dueFollowups } = await getSupabase()
+      .from('follow_ups')
+      .select('*, leads(*)')
+      .eq('status', 'pending')
+      .lte('scheduled_for', new Date().toISOString())
+      .limit(5);
+
+    if (!dueFollowups?.length) {
+      return res.status(200).json({ ok: true, processed: 0 });
+    }
+
+    let processed = 0;
+    for (const fu of dueFollowups) {
+      // Si el lead está pausado (humano lo tomó), saltarlo
+      if (fu.leads?.bot_paused) {
+        await getSupabase().from('follow_ups')
+          .update({ status: 'cancelled', cancelled_reason: 'bot_paused' })
+          .eq('id', fu.id);
+        continue;
+      }
+
+      // Si el lead respondió DESPUÉS de programar este follow-up, saltarlo
+      if (fu.leads?.last_message_at && new Date(fu.leads.last_message_at) > new Date(fu.created_at)) {
+        await getSupabase().from('follow_ups')
+          .update({ status: 'cancelled', cancelled_reason: 'lead_responded' })
+          .eq('id', fu.id);
+        continue;
+      }
+
+      // Generar y enviar follow-up
+      const followupMsg = await generateFollowup(fu.leads, fu.followup_type);
+      if (followupMsg) {
+        await sendWaMessage(fu.leads.wa_phone, followupMsg);
+        await getSupabase().from('messages').insert({
+          lead_id: fu.lead_id,
+          direction: 'outbound',
+          sender_type: 'bot',
+          body: followupMsg,
+          llm_model: 'claude-sonnet-4-5',
+        });
+        await getSupabase().from('follow_ups')
+          .update({ status: 'sent', sent_at: new Date().toISOString() })
+          .eq('id', fu.id);
+        await getSupabase().from('leads')
+          .update({ last_outbound_at: new Date().toISOString() })
+          .eq('id', fu.lead_id);
+        processed++;
+      }
+    }
+
+    return res.status(200).json({ ok: true, processed });
+  } catch (e) {
+    console.error('[Cron] error:', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// FOLLOW-UPS CANNED (sin Claude) — la mayoría de follow-ups son
+// formulaicos. Mandamos texto fijo en vez de llamar Claude $$.
+// Solo el follow-up de día 1 y 3 usan Claude (necesitan contexto).
+// ─────────────────────────────────────────────────────────
+const CANNED_FOLLOWUPS = {
+  '30min': "Te dejo descansando. Si después quieres retomar la conversación, solo escríbeme aquí mismo y continuamos donde lo dejamos 🙂",
+  '7day':  "Última vez que paso por aquí proactivamente. Si en algún momento quieres retomar, mi puerta sigue abierta. Buen camino 🙏",
+};
+
+async function generateFollowup(lead, type) {
+  // Anti-runaway: skip si el lead tiene >40 mensajes (probable loop)
+  if ((lead.message_count || 0) > 40) {
+    console.warn(`[Cron] Lead ${lead.id} has ${lead.message_count} messages — skipping follow-up`);
+    return null;
+  }
+
+  // Skip follow-up de 5 min: es spammy y caro. Empezamos en 10 min.
+  if (type === '5min') {
+    console.log(`[Cron] Skipping 5min followup for lead ${lead.id} — too aggressive`);
+    return null;
+  }
+
+  // CANNED follow-ups (sin Claude, $0): casos formulaicos que no necesitan AI.
+  if (CANNED_FOLLOWUPS[type]) {
+    console.log(`[Cron] Using canned followup for type=${type} → $0`);
+    return CANNED_FOLLOWUPS[type];
+  }
+
+  // History limit 6 (down from 10) — follow-ups no necesitan tanto contexto
+  const { data: history } = await getSupabase()
+    .from('messages')
+    .select('direction, body')
+    .eq('lead_id', lead.id)
+    .order('created_at', { ascending: false })
+    .limit(6)
+    .then(r => ({ data: (r.data || []).reverse() }));
+
+  // Truncar mensajes muy largos a 400 chars (anti-bloat)
+  const trimmed = (history || []).map(m => ({
+    ...m,
+    body: (m.body || '').length > 400 ? (m.body.substring(0, 400) + '…') : m.body,
+  }));
+
+  const prompt = `Genera un follow-up "${type}" para este lead. Stage: "${lead.stage}". Responde SOLO el texto del mensaje WhatsApp, máximo 2 frases, sin preámbulo.`;
+  const messages = trimmed.map(m => ({
+    role: m.direction === 'inbound' ? 'user' : 'assistant',
+    content: m.body,
+  }));
+  messages.push({ role: 'user', content: prompt });
+
+  // 💰 BIG SAVINGS: usar Haiku 3.5 (12x más barato que Sonnet 4.5) para
+  // follow-ups. Haiku es perfecto para mensajes cortos formulaicos.
+  // Sonnet: $3/$15 per 1M tokens. Haiku: $0.80/$4 → 4x ahorro.
+  const response = await getAnthropic().messages.create({
+    model: 'claude-haiku-4-5',
+    max_tokens: 150, // 2 frases breves
+    system: [{
+      type: 'text',
+      text: getSystemPrompt(),
+      cache_control: { type: 'ephemeral' },
+    }],
+    messages,
+  });
+  const u = response.usage || {};
+  // Haiku pricing per 1M tokens: input $0.80 / output $4 / cache_w $1 / cache_r $0.08
+  const cost = (
+    (u.input_tokens || 0) * 0.80 +
+    (u.output_tokens || 0) * 4 +
+    (u.cache_creation_input_tokens || 0) * 1.00 +
+    (u.cache_read_input_tokens || 0) * 0.08
+  ) / 1_000_000;
+  console.log(`[Cron] Followup (Haiku) cost: $${cost.toFixed(5)} | in=${u.input_tokens||0} cache_r=${u.cache_read_input_tokens||0}`);
+  return response.content?.[0]?.text?.trim();
+}
+
+function mxToggle(phone) {
+  if (!phone) return phone;
+  if (/^521\d{10}$/.test(phone)) return '52' + phone.slice(3);
+  if (/^52\d{10}$/.test(phone)) return '521' + phone.slice(2);
+  return phone;
+}
+
+async function sendWaMessage(to, body) {
+  const url = `https://graph.facebook.com/v21.0/${process.env.WA_PHONE_NUMBER_ID}/messages`;
+  async function attempt(toNumber) {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.WA_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messaging_product: 'whatsapp', to: toNumber, type: 'text', text: { body } }),
+    });
+    const text = await resp.text();
+    let parsed = null;
+    try { parsed = JSON.parse(text); } catch (e) {}
+    return { resp, text, parsed };
+  }
+  let { resp, text, parsed } = await attempt(to);
+  if (resp.ok) return;
+  const isMxRetryable = parsed?.error?.code === 131030 || parsed?.error?.code === 131026;
+  const alt = mxToggle(to);
+  if (isMxRetryable && alt && alt !== to) {
+    const r2 = await attempt(alt);
+    if (r2.resp.ok) return;
+    console.error('[Cron WA send] failed (both):', r2.resp.status, r2.text);
+    return;
+  }
+  console.error('[Cron WA send] failed:', resp.status, text);
+}
